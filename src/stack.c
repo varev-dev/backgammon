@@ -2,16 +2,15 @@
 // Created by varev on 11/24/23.
 //
 #include "stack.h"
-#include "board.h"
-#include <stdlib.h>
 
-void initStack(stack* stack) {
+void initStack(stack* stack, size_t size) {
     stack->counter = 0;
-    stack->elements = malloc(sizeof(pawn *) * STACK_DEFAULT_SIZE);
+    stack->typeSize = size;
+    stack->elements = malloc(size * STACK_DEFAULT_SIZE);
 }
 
 void resizeStack(stack* stack, int resizeType) {
-    pawn ** elementsStorage;
+    void ** elementsStorage;
     elementsStorage = stack->elements;
 
     unsigned long size = 1;
@@ -21,7 +20,7 @@ void resizeStack(stack* stack, int resizeType) {
     else
         size = stack->counter + (STACK_DEFAULT_SIZE - STACK_SIZE_DOWN_SIZE);
 
-    stack->elements = malloc(size * sizeof(pawn *));
+    stack->elements = malloc(size * stack->typeSize);
 
     for (int i = 0; i < stack->counter; i++)
         stack->elements[i] = elementsStorage[i];
@@ -50,27 +49,27 @@ int verifyResize(int counter, int resizeType) {
     return checkZero && checkSize && checkNumber;
 }
 
-void appendElementToStack(stack* stack, pawn* element) {
+void appendElementToStack(stack* stack, void* element) {
     if (verifyResize(stack->counter, VERIFY_SIZE_UP))
         resizeStack(stack, VERIFY_SIZE_UP);
 
     stack->elements[stack->counter++] = element;
 }
 
-pawn * removeElementFromStack(stack* stack) {
-    pawn * pawn = stack->elements[stack->counter - 1];
+void * removeElementFromStack(stack* stack) {
+    void * element = stack->elements[stack->counter - 1];
     stack->elements[(stack->counter--) - 1] = NULL;
-    return pawn;
+    return element;
 }
 
-pawn * getElementFromStack(stack* stack) {
+void * getElementFromStack(stack* stack) {
     if (stack->counter == 0)
         return NULL;
 
-    pawn * pawn = removeElementFromStack(stack);
+    void * element = removeElementFromStack(stack);
 
     if (verifyResize(stack->counter, VERIFY_SIZE_DOWN))
         resizeStack(stack, VERIFY_SIZE_DOWN);
 
-    return pawn;
+    return element;
 }

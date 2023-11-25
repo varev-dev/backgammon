@@ -5,7 +5,7 @@
 #ifndef BACKGAMMON_STACK_H
 #define BACKGAMMON_STACK_H
 
-#include "board.h"
+#include <stdlib.h>
 
 #define SIZE_MULTIPLIER 2
 #define STACK_DEFAULT_SIZE 5
@@ -15,12 +15,13 @@
 #define VERIFY_SIZE_DOWN 2
 
 typedef struct STACK {
-    pawn ** elements;
+    void ** elements;
     int counter;
+    size_t typeSize;
 } stack;
 
-void initStack(stack* stack);
-void appendElementToStack(stack* stack, pawn* element);
-pawn* getElementFromStack(stack* stack);
+void initStack(stack* stack, size_t size);
+void appendElementToStack(stack* stack, void* element);
+void* getElementFromStack(stack* stack);
 
 #endif //BACKGAMMON_STACK_H
