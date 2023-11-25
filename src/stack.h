@@ -1,7 +1,3 @@
-//
-// Created by varev on 11/24/23.
-//
-
 #ifndef BACKGAMMON_STACK_H
 #define BACKGAMMON_STACK_H
 
@@ -20,8 +16,8 @@ typedef struct STACK {
     size_t typeSize;
 } stack;
 
-void initStack(stack* stack, size_t size);
-void appendElementToStack(stack* stack, void* element);
-void* getElementFromStack(stack* stack);
+void InitStack(stack* stack, size_t size);
+void AppendElementToStack(stack* stack, void* element);
+void* GetTopElementFromStack(stack* stack);
 
 #endif //BACKGAMMON_STACK_H
