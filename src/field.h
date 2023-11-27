@@ -3,11 +3,15 @@
 
 #include <stdio.h>
 
-#define NEUTRAL_FIELD 'N'
-#define RED_FIELD 'R'
-#define WHITE_FIELD 'W'
+#define NEUTRAL 'N'
+#define RED 'R'
+#define WHITE 'W'
 
 #define MAX_PIECES_TO_BEAT 1
+
+#define CLEAN_MOVE 1
+#define ATTACK_MOVE 2
+#define NOT_POSSIBLE_MOVE 3
 
 typedef struct FIELD {
     char color;
@@ -17,5 +21,6 @@ typedef struct FIELD {
 void InitField(field* field);
 int RemovePawn(field* field);
 void AppendPawn(field* field, char color, int amount);
+int CheckIsMovePossible(field field, char color);
 
 #endif //BACKGAMMON_FIELD_H

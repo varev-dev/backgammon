@@ -36,16 +36,18 @@ int ReversedFieldId(int id) {
     return 25 - id;
 }
 
-int CheckIfAllPawnsInHome(board board, bar bar, char color) {
-    if (color == RED_FIELD ? bar.red_pawns.pawns_counter > 0 : bar.white_pawns.pawns_counter > 0)
-        return PIECES_NOT_IN_HOME;
+int CountPawnsInHome(board board, char color) {
+    int counter = 0;
 
     for (int i = 0; i < FIELDS; i++) {
-        if (board.fields[i].color == color &&
-            color == RED_FIELD ? i >= HOME_FIELDS : ReversedFieldId(i) >= HOME_FIELDS) {
-            return PIECES_NOT_IN_HOME;
-        }
+        if (color == board.fields[i].color &&
+            color == RED ? (i < HOME_FIELDS) : ReversedFieldId(i) < HOME_FIELDS)
+            counter += board.fields[i].pawns_counter;
     }
 
-    return PIECES_IN_HOME;
+    return counter;
+}
+
+int IsBarEmpty(bar bar, char color) {
+    return color == RED ? !bar.red_pawns.pawns_counter : !bar.white_pawns.pawns_counter;
 }
