@@ -1,25 +1,21 @@
 #ifndef BACKGAMMON_FIELD_H
 #define BACKGAMMON_FIELD_H
 
-#include "stack.h"
-#include "pawn.h"
+#include <stdio.h>
 
 #define NEUTRAL_FIELD 'N'
-#define CLEAN_MOVE 1
-#define CAPTURE_MOVE 2
-#define NOT_POSSIBLE 3
-#define MAX_PAWNS_TO_CAPTURE 1
-#define STORED_ITEM pawn *
+#define RED_FIELD 'R'
+#define WHITE_FIELD 'W'
+
+#define MAX_PIECES_TO_BEAT 1
 
 typedef struct FIELD {
-    stack pawns;
+    char color;
+    int pawns_counter;
 } field;
 
 void InitField(field* field);
-char FieldColor(field field);
-int IsMovePossible(field field, pawn pawn);
-pawn* RemovePawn(field* field);
-void AppendPawn(field* field, pawn* pawn);
-int GetNumberOfPawnsOnField(field field);
+int RemovePawn(field* field);
+void AppendPawn(field* field, char color, int amount);
 
 #endif //BACKGAMMON_FIELD_H

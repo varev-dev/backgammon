@@ -1,39 +1,31 @@
 #include "field.h"
 
 void InitField(field* field) {
-    InitStack(&field->pawns, sizeof(STORED_ITEM));
+    field->color = NEUTRAL_FIELD;
+    field->pawns_counter = 0;
 }
 
-char FieldColor(field field) {
-    if (field.pawns.counter == 0)
-        return NEUTRAL_FIELD;
+int RemovePawn(field* field) {
+    if (field->pawns_counter == 0)
+        return 0;
 
-    pawn * pawn = field.pawns.elements[0];
+    field->pawns_counter--;
 
-    return pawn->color;
+    if (field->pawns_counter == 0)
+        field->color = NEUTRAL_FIELD;
+
+    return 1;
 }
 
-int IsMovePossible(field field, pawn pawn) {
-    if (FieldColor(field) == pawn.color || FieldColor(field) == NEUTRAL_FIELD)
-        return CLEAN_MOVE;
+void AppendPawn(field* field, char color, int amount) {
+    if (amount <= 0)
+        return;
 
-    if (field.pawns.counter <= MAX_PAWNS_TO_CAPTURE)
-        return CAPTURE_MOVE;
+    if (field->color != color && field->pawns_counter > 0)
+        return;
 
-    return NOT_POSSIBLE;
-}
+    if (field->pawns_counter == 0)
+        field->color = color;
 
-pawn* RemovePawn(field* field) {
-    if (field->pawns.counter == 0)
-        return NULL;
-
-    return GetTopElementFromStack(&field->pawns);
-}
-
-void AppendPawn(field* field, pawn* pawn) {
-    AppendElementToStack(&field->pawns, pawn);
-}
-
-int GetNumberOfPawnsOnField(field field) {
-    return field.pawns.counter;
+    field->pawns_counter += amount;
 }
