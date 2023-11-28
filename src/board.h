@@ -12,8 +12,6 @@
 #define FIELDS 24
 #define HOME_FIELDS 6
 
-#define PAWNS_PER_PLAYER 15
-
 typedef struct BOARD {
     field fields[24];
 } board;
@@ -25,7 +23,8 @@ typedef struct SECTION_WITH_COUNTER {
 
 void InitBoard(board* board);
 void PrintBoard(board board);
-int CountPawnsInHome(board board, char color);
+void PrintBar(bar bar);
+int CountPawnsOnBoard(board board, char color, int category);
 int IsBarEmpty(bar bar, char color);
 int ReversedFieldId(int id);
 
