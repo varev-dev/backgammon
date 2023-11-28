@@ -9,13 +9,13 @@
 
 #define MAX_PIECES_TO_BEAT 1
 
-#define CLEAN_MOVE 1
-#define ATTACK_MOVE 2
-#define NOT_POSSIBLE_MOVE 3
+#define CLEAN_MOVE 2
+#define ATTACK_MOVE 1
+#define NOT_POSSIBLE_MOVE 0
 
 typedef struct FIELD {
     char color;
-    int pawns_counter;
+    int pawnsCounter;
 } field;
 
 void InitField(field* field);
