@@ -2,7 +2,7 @@
 
 void SetUpGame(game* game) {
     int rounds;
-    rounds = game->currentRound = 0;
+    game->score[0] = game->score[1] = rounds = game->currentRound = 0;
 
     while (rounds <= 0 || rounds > MAX_ROUNDS) {
         printf("How many rounds (1-%d): ", MAX_ROUNDS);
@@ -77,6 +77,28 @@ void ChangeTurn(game* game) {
     game->turn = game->turn == WHITE ? RED : WHITE;
 }
 
+int GetNearestAttackFieldId(board board, char color, int moveSize) {
+    int fieldId = color == RED ? FIELDS - 1 : 0;
+    moveSize *= (color == RED ? -1 : 1);
+
+    while (fieldId < FIELDS && fieldId >= 0) {
+        if (board.fields[fieldId].color == color)
+            continue;
+
+        if (fieldId + moveSize >= 24 || fieldId + moveSize < 0)
+            continue;
+
+        int moveRating = CheckIsMovePossible(board.fields[fieldId + moveSize], color);
+
+        if (moveRating == ATTACK_MOVE)
+            return fieldId;
+
+        moveSize > 0 ? fieldId++ : fieldId--;
+    }
+
+    return NO_FORCED_MOVE;
+}
+
 // to-do: return forced move as sth more readable
 int IsThereForcedMove(game game) {
     if (!IsBarEmpty(game.bar, game.turn))
@@ -115,6 +137,13 @@ void MovePawnFromBar(bar* bar1, board* board, char color, int fieldId) {
 
     RemovePawn(playerBar);
     AppendPawn(&board->fields[fieldId], color, 1);
+}
+
+void MovePawnToFinish(board* board, finish* finish, char color, int fieldId) {
+    field* playerFinish = color == RED ? &finish->red_pawns : &finish->white_pawns;
+
+    RemovePawn(&board->fields[fieldId]);
+    AppendPawn(playerFinish, color, 1);
 }
 
 void BeatPawn(board* board, bar* bar, char color, int fieldId) {
