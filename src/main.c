@@ -1,11 +1,11 @@
 #include <ncurses.h>
+#include <time.h>
 
-#include "board.h"
+#include "game.h"
 
 int main() {
-    board board1;
-    InitBoard(&board1);
-//    printf("%d %c", board1.fields[23].pawns_counter, board1.fields[23].color);
-    PrintBoard(board1);
+    srand(time(NULL));
+    game game1;
+    InitGame(&game1);
     return 0;
 }
