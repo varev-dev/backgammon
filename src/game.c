@@ -171,7 +171,7 @@ int IsAnyPossibleMove(board board, bar bar, char color, int dice[DICE_AMOUNT]) {
     return 0;
 }
 
-// to-do: return forced move as sth more readable
+// to-do: forced move to finish?
 int IsThereForcedMove(game game) {
     if (!IsBarEmpty(game.bar, game.turn))
         return BAR_INIT;
@@ -186,11 +186,6 @@ int IsThereForcedMove(game game) {
 
         move++;
     }
-
-    int pawnsOnBoard = CountPawnsOnBoard(game.board, game.turn, FIELDS),
-            homePawns = CountPawnsOnBoard(game.board, game.turn, HOME_FIELDS);
-
-    if ()
 
     return 0;
 }
