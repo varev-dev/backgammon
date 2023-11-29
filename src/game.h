@@ -5,6 +5,7 @@
 
 #include "board.h"
 
+#define BAR_INIT (-2)
 #define NO_FORCED_MOVE (-1)
 
 #define MAX_ROUNDS 15
@@ -29,6 +30,7 @@ void RollDice(game* game, int amount);
 void SetFirstTurn(game* game);
 void ChangeTurn(game* game);
 void StartRound(game* game);
+int IsThereForcedMove(game game);
 int GetNearestAttackFieldId(board board, char color, int moveSize);
 void MovePawnOnBoard(board* board, char color, int initialField, int finalField);
 void MovePawnFromBar(bar* bar, board* board, char color, int fieldId);
