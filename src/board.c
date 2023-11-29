@@ -20,21 +20,22 @@ void InitBoard(board* board) {
 
 void PrintBoard(board board) {
     for (int i = 0; i < FIELDS; i++) {
-        printf("%d. ", i + 1);
-        char field_color = board.fields[i].color;
-        int pawns_on_field = board.fields[i].pawnsCounter;
+        int clockWiseBoardPrintCurrentIndex = i;
 
-        for (int j = 0; j < pawns_on_field; j++) {
-            printf("%c ", field_color);
-        }
+        if (i < 12)
+            clockWiseBoardPrintCurrentIndex = 11 - i;
 
-        printf("\n");
+        char field_color = board.fields[clockWiseBoardPrintCurrentIndex].color;
+        int pawns_on_field = board.fields[clockWiseBoardPrintCurrentIndex].pawnsCounter;
+        printf("%c%d ", field_color, pawns_on_field);
+
+        if ((i + 1) % 12 == 0)
+            printf("\n");
     }
 }
 
-void PrintBar(bar bar) {
-    printf("BAR - WHITE: %d, RED: %d\n",
-    bar.white_pawns.pawnsCounter, bar.red_pawns.pawnsCounter);
+void PrintSectionWithCounter(struct SECTION_WITH_COUNTER swc, char* name) {
+    printf("%s - WHITE: %d, RED: %d\n", name, swc.white_pawns.pawnsCounter, swc.red_pawns.pawnsCounter);
 }
 
 int ReversedFieldId(int id) {

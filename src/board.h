@@ -23,7 +23,7 @@ typedef struct SECTION_WITH_COUNTER {
 
 void InitBoard(board* board);
 void PrintBoard(board board);
-void PrintBar(bar bar);
+void PrintSectionWithCounter(struct SECTION_WITH_COUNTER sectionWithCounter, char* name);
 int CountPawnsOnBoard(board board, char color, int category);
 int IsBarEmpty(bar bar, char color);
 int ReversedFieldId(int id);
