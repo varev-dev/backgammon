@@ -1,13 +1,13 @@
 #include "board.h"
 
-void InitFields(board* board) {
+void InitFields(board* board, const char* pawns, const char* colors) {
     for (int i = 0; i < FIELDS; i++) {
         InitField(&board->fields[i]);
 
-        int amount = (int) (BOARD_PATTERN[i] - '0');
-        char color = PAWN_COLORS[i];
+        int amount = (int) (pawns[i] - 'A' + 1);
+        char color = colors[i];
 
-        if (!amount || !(color - '0'))
+        if (amount <= 0 || !(color - '0'))
             continue;
 
         AppendPawn(&board->fields[i], color, amount);
@@ -15,7 +15,7 @@ void InitFields(board* board) {
 }
 
 void InitBoard(board* board) {
-    InitFields(board);
+    InitFields(board, BOARD_PATTERN, PAWN_COLORS);
 }
 
 void PrintBoard(board board) {
