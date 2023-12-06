@@ -23,7 +23,7 @@ void SetUpGame(game* game) {
     game->score[0] = game->score[1] = rounds = game->currentRound = 0;
 
     while (rounds < 1 || rounds > MAX_ROUNDS) {
-        printf("How many rounds (1-%d): ", MAX_ROUNDS);
+        printf("How many rounds (1-%d):", MAX_ROUNDS);
         scanf("%d", &rounds);
     }
 
@@ -33,9 +33,7 @@ void SetUpGame(game* game) {
 void InitGame(game* game) {
     SetUpGame(game);
     StartRound(game);
-    PrintBoard(game->board);
-    PrintSectionWithCounter(game->bar, "Bar");
-    PrintSectionWithCounter(game->finish, "Finish");
+    PrintBoard(game->board, game->bar, game->finish);
 }
 
 void RollDice(game* game, int amount) {
