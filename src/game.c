@@ -1,23 +1,5 @@
 #include "game.h"
 
-int RoundMenu(game* game) {
-
-}
-
-void PlayRound(game* game) {
-    while (!CheckWinner(*game)) {
-        printf("%s's turn, press key to roll the dice...", game->turn == RED ? "RED" : "WHITE");
-        scanf("");
-
-        if (IsThereForcedMove(*game)) {
-            printf("There is FORCED move, press key to continue");
-        }
-
-    }
-
-    printf("Winner: %c", game->turn);
-}
-
 void SetUpGame(game* game) {
     int rounds;
     game->score[0] = game->score[1] = rounds = game->currentRound = 0;
@@ -36,9 +18,60 @@ void InitGame(game* game) {
     PrintBoard(game->board, game->bar, game->finish);
 }
 
-void RollDice(game* game, int amount) {
-    for (int i = 0; i < amount && i < DICE_AMOUNT; i++) {
+void RoundIntro(game game) {
+    printf("Round No. %d\n", game.currentRound);
+    printf("RED roll dice\nWHITE roll dice\n");
+    printf("RED - %d, WHITE - %d\n%c starts\n", game.dice[0], game.dice[1], game.turn);
+}
+
+void PlayTurn(game* game) {
+    if (game->dice[0] == 0)
+        RollDice(game);
+
+    SetDicesIfDouble(game->dice);
+    SortDice(game->dice);
+    SetPossibleMoveSizes(game->dice, game->moveSize);
+
+    printf("%d %d", game->dice[0], game->dice[1]);
+
+    while (IsAnyMovePossible(game->board, game->bar, game->turn, game->dice)) {
+        pawn_move forced_move = IsThereForcedMove(game->board, game->bar, game->finish, game->turn, game->moveSize);
+
+        if (forced_move.type == BAR_INIT)
+            printf("bar init req.\n");
+        else if (forced_move.type == ATTACK_SIGN)
+            printf("attack req.\n");
+
+    }
+
+    ChangeTurn(game);
+}
+
+void PlayRound(game* game) {
+    /*while (!CheckWinner(*game)) {
+        printf("%s's turn, press key to roll the dice...", game->turn == RED ? "RED" : "WHITE");
+        scanf("");
+
+        pawn_move forced = IsThereForcedMove(*game);
+
+        if (forced.type != NOT_SET) {
+            printf("There is FORCED move, press key to continue");
+        }
+    }*/
+
+    printf("Winner: %c", game->turn);
+}
+
+void RollDice(game* game) {
+    for (int i = 0; i < DICE_AMOUNT; i++)
         game->dice[i] = rand() % 6 + 1;
+}
+
+void SortDice(int dice[DICE_AMOUNT]) {
+    if (dice[1] < dice[0]) {
+        int temp = dice[0];
+        dice[0] = dice[1];
+        dice[1] = temp;
     }
 }
 
@@ -51,29 +84,53 @@ int IsItDouble(const int dice[DICE_AMOUNT]) {
     return 1;
 }
 
-void SetMovesSize(int dice[DICE_AMOUNT], int* moveSize) {
-    for (int i = 0; i < SINGLE_TURN_MAX_MOVES; i++) {
-        if (i < DICE_AMOUNT)
-            moveSize[i] = dice[i];
-        else if (IsItDouble(dice))
-            moveSize[i] = dice[0];
+void SetDicesIfDouble(int dice[MAX_DICES]) {
+    for (int i = DICE_AMOUNT; i < MAX_DICES; i++) {
+        if (IsItDouble(dice))
+            dice[i] = dice[0];
         else
+            dice[i] = 0;
+    }
+}
+
+void SetPossibleMoveSizes(int dice[MAX_DICES], int moveSize[MAX_DICES]) {
+    for (int i = 0; i < MAX_DICES; i++) {
+        if (IsItDouble(dice))
+            moveSize[i] = dice[0] * (i+1);
+        else if (i < DICE_AMOUNT)
+            moveSize[i] = dice[1];
+        else if (i == DICE_AMOUNT) {
+            for (int j = 0; j < i; j++) {
+                moveSize[i] += dice[j];
+            }
+        } else
             moveSize[i] = 0;
     }
 }
 
+void ResetMovesOrDices(int arr[MAX_DICES]) {
+    for (int i = 0; i < MAX_DICES; i++) {
+        arr[i] = 0;
+    }
+}
+
 void SetFirstTurn(game* game) {
+    ResetMovesOrDices(game->dice);
+
     if (game->turn != NEUTRAL)
         return;
 
     while (game->dice[0] == game->dice[1]) {
-        RollDice(game, DICE_AMOUNT);
+        RollDice(game);
     }
 
     game->turn = game->dice[0] > game->dice[1] ? RED : WHITE;
 }
 
 void ChangeTurn(game* game) {
+    ResetMovesOrDices(game->dice);
+    ResetMovesOrDices(game->moveSize);
+
     if (game->turn == NEUTRAL)
         return;
 
@@ -91,128 +148,7 @@ void StartRound(game* game) {
 
     game->turn = NEUTRAL;
     SetFirstTurn(game);
-}
-
-int GetNearestAttackFieldId(board board, char color, int moveSize) {
-    int fieldId = color == RED ? FIELDS - 1 : 0;
-    moveSize *= (color == RED ? -1 : 1);
-
-    while (fieldId < FIELDS && fieldId >= 0) {
-        if (board.fields[fieldId].color == color)
-            continue;
-
-        if (fieldId + moveSize >= 24 || fieldId + moveSize < 0)
-            continue;
-
-        int moveRating = CheckIsMovePossible(board.fields[fieldId + moveSize], color);
-
-        if (moveRating == ATTACK_MOVE)
-            return fieldId;
-
-        moveSize > 0 ? fieldId++ : fieldId--;
-    }
-
-    return NO_FORCED_MOVE;
-}
-
-int IsMoveFromBarPossible(board board, char color, int dice[DICE_AMOUNT]) {
-    for (int i = 0; i < DICE_AMOUNT; i++) {
-        int fieldId = color == RED ? ReversedFieldId(dice[i]) : dice[i];
-        if (CheckIsMovePossible(board.fields[fieldId], color))
-            return 1;
-    }
-
-    return 0;
-}
-
-int IsMoveWithSizeFromBoardPossible(board board, char color, int moveSize) {
-    for (int i = 0; i < FIELDS - moveSize; i++) {
-        int fieldId = color == RED ? ReversedFieldId(i) - moveSize : i + moveSize;
-
-        if (CheckIsMovePossible(board.fields[fieldId], color))
-            return 1;
-    }
-
-    return 0;
-}
-
-int IsMoveToFinishPossible(board board, char color, int moveSize) {
-    int pawnsOnBoard = CountPawnsOnBoard(board, color, FIELDS),
-        homePawns = CountPawnsOnBoard(board, color, HOME_FIELDS);
-
-    if (pawnsOnBoard - homePawns > 0 || homePawns == 0)
-        return 0;
-
-    for (int i = FIELDS - 1; i >= 0; i--) {
-        int fieldId = color == RED ? ReversedFieldId(i) : i;
-
-        if (board.fields[fieldId].color != color)
-            continue;
-
-        if (moveSize - i >= 0)
-            return 1;
-    }
-
-    return 0;
-}
-
-int IsAnyPossibleMove(board board, bar bar, char color, int dice[DICE_AMOUNT]) {
-    if (!IsBarEmpty(bar, color))
-        return IsMoveFromBarPossible(board, color, dice);
-
-    for (int i = 0; i < DICE_AMOUNT; i++) {
-        if (IsMoveWithSizeFromBoardPossible(board, color, dice[i]) ||
-            IsMoveToFinishPossible(board, color, dice[i]))
-            return 1;
-    }
-
-    return 0;
-}
-
-// to-do: forced move to finish?
-int IsThereForcedMove(game game) {
-    if (!IsBarEmpty(game.bar, game.turn))
-        return BAR_INIT;
-
-    int move = 0;
-
-    while (game.moveSize[move]) {
-        int nearestAttack = GetNearestAttackFieldId(game.board, game.turn, game.moveSize[move]);
-
-        if (nearestAttack != NO_FORCED_MOVE)
-            return nearestAttack;
-
-        move++;
-    }
-
-    return 0;
-}
-
-void MovePawnOnBoard(board* board, char color, int initialField, int finalField) {
-    RemovePawn(&board->fields[initialField]);
-    AppendPawn(&board->fields[finalField], color, 1);
-}
-
-void MovePawnFromBar(bar* bar1, board* board, char color, int fieldId) {
-    field * playerBar = color == RED ? &bar1->red_pawns : &bar1->white_pawns;
-
-    RemovePawn(playerBar);
-    AppendPawn(&board->fields[fieldId], color, 1);
-}
-
-void MovePawnToFinish(board* board, finish* finish, char color, int fieldId) {
-    field* playerFinish = color == RED ? &finish->red_pawns : &finish->white_pawns;
-
-    RemovePawn(&board->fields[fieldId]);
-    AppendPawn(playerFinish, color, 1);
-}
-
-void BeatPawn(board* board, bar* bar, char color, int fieldId) {
-    int beatenPawns = board->fields[fieldId].pawnsCounter;
-    char opponentColor = color == RED ? WHITE : RED;
-    field * opponentBar = color == RED ? &bar->white_pawns : &bar->red_pawns;
-
-    AppendPawn(opponentBar, opponentColor, beatenPawns);
+    RoundIntro(*game);
 }
 
 int CheckWinner(game game) {
