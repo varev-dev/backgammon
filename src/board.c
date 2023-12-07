@@ -59,7 +59,7 @@ void PrintBoard(board board, bar bar, finish finish) {
 
         char field_color = board.fields[clockWiseIndex].color;
         int pawns_on_field = board.fields[clockWiseIndex].pawnsCounter;
-        printf("%c%d ", field_color, pawns_on_field);
+        printf("%c%X ", field_color, pawns_on_field);
 
         if ((i + 1) % 12 == 0 || (i + 1) % 12 == 6) {
             printf("|| ");
@@ -92,4 +92,145 @@ int CountPawnsOnBoard(board board, char color, int category) {
 
 int IsBarEmpty(bar bar, char color) {
     return color == RED ? !bar.red_pawns.pawnsCounter : !bar.white_pawns.pawnsCounter;
+}
+
+int IsMoveFromBarPossible(board board, char color, int dice[DICE_AMOUNT]) {
+    for (int i = 0; i < DICE_AMOUNT; i++) {
+        int fieldId = color == RED ? ReversedFieldId(dice[i]) : dice[i];
+        if (CheckIsMovePossible(board.fields[fieldId], color))
+            return 1;
+    }
+
+    return 0;
+}
+
+int IsMoveWithSizeFromBoardPossible(board board, char color, int moveSize) {
+    for (int i = 0; i < FIELDS - moveSize; i++) {
+        int fieldId = color == RED ? ReversedFieldId(i) - moveSize : i + moveSize;
+
+        if (CheckIsMovePossible(board.fields[fieldId], color))
+            return 1;
+    }
+
+    return 0;
+}
+
+int IsMoveToFinishPossible(board board, char color, int moveSize) {
+    int pawnsOnBoard = CountPawnsOnBoard(board, color, FIELDS),
+            homePawns = CountPawnsOnBoard(board, color, HOME_FIELDS);
+
+    if (pawnsOnBoard - homePawns > 0 || homePawns == 0)
+        return 0;
+
+    for (int i = FIELDS - 1; i >= 0; i--) {
+        int fieldId = color == RED ? ReversedFieldId(i) : i;
+
+        if (board.fields[fieldId].color != color)
+            continue;
+
+        if (moveSize - i >= 0)
+            return 1;
+    }
+
+    return 0;
+}
+
+int IsAnyMovePossible(board board, bar bar, char color, int dice[DICE_AMOUNT]) {
+    if (!IsBarEmpty(bar, color))
+        return IsMoveFromBarPossible(board, color, dice);
+
+    for (int i = 0; i < DICE_AMOUNT; i++) {
+        if (IsMoveWithSizeFromBoardPossible(board, color, dice[i]) ||
+            IsMoveToFinishPossible(board, color, dice[i]))
+            return 1;
+    }
+
+    return 0;
+}
+
+void ClosestPossibleAttack(board board, char color, int moveSize[MAX_DICES], pawn_move* move) {
+    int fieldId, init, mult = color == RED ? -1 : 1;
+
+    init = fieldId = color == RED ? FIELDS - 1 : 0;
+
+    while (fieldId < FIELDS && fieldId >= 0) {
+        if (board.fields[fieldId].color == color)
+            continue;
+
+        for (int i = 0; i < MAX_DICES; i++) {
+            int finalField = fieldId + moveSize[i];
+
+            if (finalField >= FIELDS || finalField < 0)
+                continue;
+
+            if (CheckIsMovePossible(board.fields[finalField], color) == ATTACK &&
+                init + mult * (finalField) < init + mult * (move->final)) {
+                move->initial = fieldId;
+                move->final = finalField;
+            }
+        }
+
+        moveSize > 0 ? fieldId++ : fieldId--;
+    }
+}
+
+pawn_move ForcedAttack(board board, char color, int moveSize[MAX_DICES]) {
+    pawn_move move;
+    move.type = NOT_SET;
+    move.final = FIELDS;
+    int mult = color == RED ? -1 : 1;
+
+    for (int i = 0; i < MAX_DICES; i++) {
+        moveSize[i] *= mult;
+    }
+
+    ClosestPossibleAttack(board, color, moveSize, &move);
+
+    if (move.final != FIELDS)
+        move.type = ATTACK_SIGN;
+
+    return move;
+}
+
+pawn_move IsThereForcedMove(board board, bar bar, finish finish, char color, int moveSize[MAX_DICES]) {
+    pawn_move forcedMove;
+    forcedMove.type = NOT_SET;
+
+    if (!IsBarEmpty(bar, color)) {
+        forcedMove.type = INIT_BAR_SIGN;
+        return forcedMove;
+    }
+
+    forcedMove = ForcedAttack(board, color, moveSize);
+    if (forcedMove.type == ATTACK_SIGN)
+        return forcedMove;
+
+    return forcedMove;
+}
+
+void MovePawnOnBoard(board* board, char color, int initialField, int finalField) {
+    RemovePawn(&board->fields[initialField]);
+    AppendPawn(&board->fields[finalField], color, 1);
+}
+
+void MovePawnFromBar(bar* bar, board* board, char color, int fieldId) {
+    field * playerBar = color == RED ? &bar->red_pawns : &bar->white_pawns;
+
+    RemovePawn(playerBar);
+    AppendPawn(&board->fields[fieldId], color, 1);
+}
+
+void MovePawnToFinish(board* board, finish* finish, char color, int fieldId) {
+    field* playerFinish = color == RED ? &finish->red_pawns : &finish->white_pawns;
+
+    RemovePawn(&board->fields[fieldId]);
+    AppendPawn(playerFinish, color, 1);
+}
+
+void BeatPawn(board* board, bar* bar, char color, int fieldId) {
+    int beatenPawns = board->fields[fieldId].pawnsCounter;
+    char opponentColor = color == RED ? WHITE : RED;
+    field * opponentBar = color == RED ? &bar->white_pawns : &bar->red_pawns;
+
+    AppendPawn(opponentBar, opponentColor, beatenPawns);
 }
