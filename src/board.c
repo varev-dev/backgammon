@@ -179,7 +179,7 @@ void ClosestPossibleAttack(board board, char color, int moveSize[MAX_DICES], paw
 }
 
 int IsBarInitAttackPossible(bar bar, board board, char color, int dice[MAX_DICES]) {
-    if ((color == RED ? bar.red_pawns.pawnsCounter : bar.white_pawns.pawnsCounter) == 0)
+    if (IsBarEmpty(bar, color))
         return -1;
 
     if (dice[0] == dice[1])
@@ -216,6 +216,7 @@ pawn_move ForcedAttack(board board, char color, int moveSize[MAX_DICES]) {
     return move;
 }
 
+// to-do finish forced to last pawn on board if movesize > fields to finish
 pawn_move IsThereForcedMove(board board, bar bar, finish finish, char color, int moveSize[MAX_DICES]) {
     pawn_move forcedMove;
     forcedMove.type = NOT_SET;

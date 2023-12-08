@@ -5,7 +5,7 @@
 #define INIT_BAR_SIGN 'I'
 #define BOARD_MOVE_SIGN 'B'
 #define ATTACK_SIGN 'A'
-#define END 'E'
+#define FINISH_SIGN 'F'
 
 typedef struct pawn_move {
     char type;
