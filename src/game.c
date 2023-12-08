@@ -24,6 +24,71 @@ void RoundIntro(game game) {
     printf("RED - %d, WHITE - %d\n%c starts\n", game.dice[0], game.dice[1], game.turn);
 }
 
+void LoadCommand(char* command) {
+    while (*command != INIT_BAR_SIGN && *command != BOARD_MOVE_SIGN && *command != FINISH_SIGN) {
+        printf("Choose option: (B) move on board, (I) bar init");
+        scanf("%c", command);
+    }
+}
+
+void ChooseValueFromArray(int arr[MAX_DICES], int* size, char* type) {
+    printf("%s:", type);
+    for (int i = 0; i < MAX_DICES; i++) {
+        if (arr[i] == 0)
+            continue;
+
+        printf(" (%d) %d", i+1, arr[i]);
+    }
+    printf("\n");
+
+    while (1) {
+        printf("Choose %s by id:", type);
+        scanf("%d", size);
+
+        if (*size > 0 && *size < MAX_DICES && arr[*size] != 0)
+            break;
+    }
+}
+
+void ChooseField(char* name, int* fieldId) {
+    printf("Choose %s field (1-24)", name);
+
+    while (*fieldId >= 24 || *fieldId < 0) {
+        printf("Enter field id");
+        scanf("%d", fieldId);
+        (*fieldId)--;
+    }
+}
+
+pawn_move MoveMenu(game game) {
+    char command;
+    LoadCommand(&command);
+    int initialField = 25, finalField = 25;
+
+    switch (command) {
+        case INIT_BAR_SIGN:
+            ChooseValueFromArray(game.dice, &finalField, "dice");
+            if (game.turn == RED)
+                finalField = ReversedFieldId(finalField);
+            break;
+        case FINISH_SIGN:
+            ChooseField("initial", &initialField);
+            break;
+        case BOARD_MOVE_SIGN:
+            ChooseField("initial", &initialField);
+            ChooseValueFromArray(game.moveSize, &finalField, "move size");
+            finalField = initialField + (game.turn == RED ? -1 : 1) * finalField;
+            break;
+    }
+
+    pawn_move pawnMove;
+    pawnMove.color = game.turn;
+    pawnMove.type = command;
+    pawnMove.initial = initialField;
+
+    return pawnMove;
+}
+
 void PlayTurn(game* game) {
     if (game->dice[0] == 0)
         RollDice(game);
@@ -38,10 +103,16 @@ void PlayTurn(game* game) {
         pawn_move forced_move = IsThereForcedMove(game->board, game->bar, game->finish, game->turn, game->moveSize);
 
         if (forced_move.type == BAR_INIT)
-            printf("bar init req.\n");
+            printf("You have to init pawn\n");
         else if (forced_move.type == ATTACK_SIGN)
-            printf("attack req.\n");
+            printf("You have to beat pawn on field %d\n", forced_move.final);
 
+        pawn_move move = MoveMenu(*game);
+
+        if (move.type != forced_move.type)
+            continue;
+        if (move.type == ATTACK_SIGN && move.final != forced_move.final)
+            continue;
     }
 
     ChangeTurn(game);

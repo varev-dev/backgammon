@@ -163,7 +163,7 @@ void ClosestPossibleAttack(board board, char color, int moveSize[MAX_DICES], paw
             if (finalField >= FIELDS || finalField < 0)
                 continue;
 
-            if (CheckIsMovePossible(board.fields[finalField], color) == ATTACK &&
+            if (CheckIsMovePossible(board.fields[finalField], color) == ATTACK_MOVE &&
                 init + mult * (finalField) < init + mult * (move->final)) {
                 move->initial = fieldId;
                 move->final = finalField;
