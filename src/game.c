@@ -104,7 +104,7 @@ void PlayTurn(game* game) {
 
         if (forced_move.type == BAR_INIT)
             printf("You have to init pawn\n");
-        else if (forced_move.type == ATTACK_SIGN)
+        if (forced_move.type == ATTACK_SIGN)
             printf("You have to beat pawn on field %d\n", forced_move.final);
 
         pawn_move move = MoveMenu(*game);

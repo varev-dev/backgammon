@@ -74,6 +74,10 @@ int ReversedFieldId(int id) {
     return FIELDS - id - 1;
 }
 
+int FieldIdByColor(int fieldId, char color) {
+    return color == RED ? ReversedFieldId(fieldId) : fieldId;
+}
+
 int CountPawnsOnBoard(board board, char color, int category) {
     int counter = 0;
 
@@ -96,7 +100,7 @@ int IsBarEmpty(bar bar, char color) {
 
 int IsMoveFromBarPossible(board board, char color, int dice[DICE_AMOUNT]) {
     for (int i = 0; i < DICE_AMOUNT; i++) {
-        int fieldId = color == RED ? ReversedFieldId(dice[i]) : dice[i];
+        int fieldId = FieldIdByColor(dice[i], color);
         if (CheckIsMovePossible(board.fields[fieldId], color))
             return 1;
     }
@@ -172,6 +176,26 @@ void ClosestPossibleAttack(board board, char color, int moveSize[MAX_DICES], paw
 
         moveSize > 0 ? fieldId++ : fieldId--;
     }
+}
+
+int IsBarInitAttackPossible(bar bar, board board, char color, int dice[MAX_DICES]) {
+    if ((color == RED ? bar.red_pawns.pawnsCounter : bar.white_pawns.pawnsCounter) == 0)
+        return -1;
+
+    if (dice[0] == dice[1])
+        return FieldIdByColor(dice[0], color);
+
+    for (int i = 0; i < MAX_DICES; i++) {
+        if (dice[i] == 0)
+            return -1;
+
+        int fieldId = FieldIdByColor(dice[i], color);
+
+        if (CheckIsMovePossible(board.fields[fieldId], color) == ATTACK_MOVE)
+            return fieldId;
+    }
+
+    return -1;
 }
 
 pawn_move ForcedAttack(board board, char color, int moveSize[MAX_DICES]) {

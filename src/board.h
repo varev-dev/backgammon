@@ -29,6 +29,11 @@ void PrintBoard(board board, bar bar, finish finish);
 pawn_move IsThereForcedMove(board board, bar bar, finish finish, char color, int moveSize[MAX_DICES]);
 int CountPawnsOnBoard(board board, char color, int category);
 pawn_move ForcedAttack(board board, char color, int moveSize[MAX_DICES]);
+int IsBarInitAttackPossible(bar bar, board board, char color, int dice[MAX_DICES]);
+void MovePawnOnBoard(board* board, char color, int initialField, int finalField);
+void MovePawnFromBar(bar* bar, board* board, char color, int fieldId);
+void MovePawnToFinish(board* board, finish* finish, char color, int fieldId);
+void BeatPawn(board* board, bar* bar, char color, int fieldId);
 int IsBarEmpty(bar bar, char color);
 int ReversedFieldId(int id);
 
