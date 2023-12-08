@@ -19,6 +19,7 @@ typedef struct FIELD {
 } field;
 
 void InitField(field* field);
+void InitFieldWIthData(field* field, char color, int pawns);
 int RemovePawn(field* field);
 void AppendPawn(field* field, char color, int amount);
 int CheckIsMovePossible(field field, char color);

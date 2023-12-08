@@ -39,3 +39,8 @@ int CheckIsMovePossible(field field, char color) {
 
     return NOT_POSSIBLE_MOVE;
 }
+
+void InitFieldWIthData(field* field, char color, int pawns) {
+    field->color = color;
+    field->pawnsCounter = pawns;
+}

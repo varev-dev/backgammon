@@ -40,7 +40,7 @@ void ChooseValueFromArray(int arr[MAX_DICES], int* size, char* type) {
         printf("Choose %s by id:", type);
         scanf("%d", size);
 
-        if (*size > 0 && *size < MAX_DICES && arr[*size - 1] != 0) {
+        if (*size-1 >= 0 && *size < MAX_DICES && arr[*size - 1] != 0) {
             *size = arr[*size - 1];
             break;
         }
@@ -64,8 +64,11 @@ pawn_move MoveMenu(game game) {
     switch (command) {
         case INIT_BAR_SIGN:
             ChooseValueFromArray(game.dice, &finalField, "dice");
-            if (game.turn == RED)
+            if (game.turn == RED) {
                 finalField = ReversedFieldId(finalField);
+                finalField++;
+            } else
+                finalField--;
             break;
         case FINISH_SIGN:
             ChooseField("initial", &initialField);
@@ -100,15 +103,15 @@ void PlayTurn(game* game) {
 
     while (IsAnyMovePossible(game->board, game->bar, game->turn, game->dice)) {
         PrintBoard(game->board, game->bar, game->finish);
-        pawn_move forced_move = IsThereForcedMove(game->board, game->bar, game->finish, game->turn, game->moveSize);
+        pawn_move forcedMove = IsThereForcedMove(game->board, game->bar, game->finish,
+                                                  game->turn, game->moveSize, game->dice);
 
-        if (forced_move.type == BAR_INIT)
+        if (forcedMove.type == INIT_BAR_SIGN)
             printf("You have to init pawn\n");
-        if (forced_move.type == ATTACK_SIGN)
-            printf("You have to beat pawn on field %d\n", forced_move.final+1);
+        if (forcedMove.type == ATTACK_SIGN || (forcedMove.type == INIT_BAR_SIGN && forcedMove.final != -1))
+            printf("You have to beat pawn on field %d\n", forcedMove.final+1);
 
         pawn_move move = MoveMenu(*game);
-
         int mvRat = CheckIsMovePossible(game->board.fields[move.final], game->turn);
 
         if (mvRat == NOT_POSSIBLE_MOVE) {
@@ -116,22 +119,24 @@ void PlayTurn(game* game) {
             continue;
         }
 
-        if (forced_move.type != NOT_SET && move.type != forced_move.type)
+        if (forcedMove.type != NOT_SET && move.type != forcedMove.type || move.final != forcedMove.final) {
+            printf("YOU HAVE TO MAKE FORCED MOVE\n");
             continue;
-        if (move.type == ATTACK_SIGN && move.final != forced_move.final)
-            continue;
+        }
 
-        if (mvRat == ATTACK_MOVE)
+        if (move.type == ATTACK_SIGN || (move.type == INIT_BAR_SIGN && move.final != -1))
             BeatPawn(&game->board, &game->bar, move);
-
-        MovePawnOnBoard(&game->board, move);
+        if (move.type == INIT_BAR_SIGN)
+            MovePawnFromBar(&game->bar, &game->board, game->turn, move.final);
+        if (mvRat == CLEAN_MOVE || mvRat == ATTACK_MOVE)
+            MovePawnOnBoard(&game->board, move);
     }
 
     ChangeTurn(game);
 }
 
 void PlayRound(game* game) {
-    while (!CheckWinner(*game)) {
+    while (CheckWinner(*game)) {
         printf("%s's turn, roll the dice...", game->turn == RED ? "RED" : "WHITE");
         PlayTurn(game);
     }
@@ -223,8 +228,10 @@ void StartRound(game* game) {
     game->currentRound++;
 
     InitBoard(&game->board);
-    InitField(&game->bar.white_pawns);
-    InitField(&game->bar.red_pawns);
+    /*InitField(&game->bar.white_pawns);
+    InitField(&game->bar.red_pawns);*/
+    InitFieldWIthData(&game->bar.white_pawns, WHITE, 1);
+    InitFieldWIthData(&game->bar.red_pawns, RED, 1);
     InitField(&game->finish.white_pawns);
     InitField(&game->finish.red_pawns);
 

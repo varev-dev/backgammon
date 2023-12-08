@@ -10,6 +10,8 @@
 #define BOARD_PATTERN "BAAAAE0C000EE000C0EAAAAB"
 #define PAWN_COLORS "WRRRRR0R000WR000W0WWWWWR"
 
+#define BAR 1
+
 #define FIELDS 24
 #define HOME_FIELDS 6
 #define DICE_AMOUNT 2
@@ -26,7 +28,7 @@ typedef struct SECTION_WITH_COUNTER {
 
 void InitBoard(board* board);
 void PrintBoard(board board, bar bar, finish finish);
-pawn_move IsThereForcedMove(board board, bar bar, finish finish, char color, int moveSize[MAX_DICES]);
+pawn_move IsThereForcedMove(board board, bar bar, finish finish, char color, int moveSize[MAX_DICES], int dice[MAX_DICES]);
 int CountPawnsOnBoard(board board, char color, int category);
 void ForcedAttack(board board, char color, int moveSize[MAX_DICES], pawn_move* move);
 int IsBarInitAttackPossible(bar bar, board board, char color, int dice[MAX_DICES]);
@@ -36,5 +38,6 @@ void MovePawnToFinish(board* board, finish* finish, char color, int fieldId);
 void BeatPawn(board* board, bar* bar, pawn_move move);
 int IsBarEmpty(bar bar, char color);
 int ReversedFieldId(int id);
+int FieldIdByColor(int fieldId, char color);
 
 #endif //BACKGAMMON_BOARD_H
