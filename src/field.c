@@ -34,7 +34,7 @@ int CheckIsMovePossible(field field, char color) {
     if (field.color == color || field.color == NEUTRAL || !field.pawnsCounter)
         return CLEAN_MOVE;
 
-    if (field.pawnsCounter > 0 && field.pawnsCounter <= MAX_PIECES_TO_BEAT)
+    if (field.pawnsCounter <= MAX_PIECES_TO_BEAT)
         return ATTACK_MOVE;
 
     return NOT_POSSIBLE_MOVE;

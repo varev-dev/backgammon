@@ -8,14 +8,9 @@ void SetUpGame(game* game) {
         printf("How many rounds (1-%d):", MAX_ROUNDS);
         scanf("%d", &rounds);
     }
+    scanf("");
 
     game->rounds=rounds;
-}
-
-void InitGame(game* game) {
-    SetUpGame(game);
-    StartRound(game);
-    PrintBoard(game->board, game->bar, game->finish);
 }
 
 void RoundIntro(game game) {
@@ -25,8 +20,8 @@ void RoundIntro(game game) {
 }
 
 void LoadCommand(char* command) {
+    printf("Choose option: (B) move on board, (I) bar init\n");
     while (*command != INIT_BAR_SIGN && *command != BOARD_MOVE_SIGN && *command != FINISH_SIGN) {
-        printf("Choose option: (B) move on board, (I) bar init");
         scanf("%c", command);
     }
 }
@@ -45,23 +40,24 @@ void ChooseValueFromArray(int arr[MAX_DICES], int* size, char* type) {
         printf("Choose %s by id:", type);
         scanf("%d", size);
 
-        if (*size > 0 && *size < MAX_DICES && arr[*size] != 0)
+        if (*size > 0 && *size < MAX_DICES && arr[*size - 1] != 0) {
+            *size = arr[*size - 1];
             break;
+        }
     }
 }
 
 void ChooseField(char* name, int* fieldId) {
-    printf("Choose %s field (1-24)", name);
+    printf("Choose %s field (1-24)\n", name);
 
     while (*fieldId >= 24 || *fieldId < 0) {
-        printf("Enter field id");
         scanf("%d", fieldId);
         (*fieldId)--;
     }
 }
 
 pawn_move MoveMenu(game game) {
-    char command;
+    char command = 1;
     LoadCommand(&command);
     int initialField = 25, finalField = 25;
 
@@ -79,12 +75,15 @@ pawn_move MoveMenu(game game) {
             ChooseValueFromArray(game.moveSize, &finalField, "move size");
             finalField = initialField + (game.turn == RED ? -1 : 1) * finalField;
             break;
+        default:
+            break;
     }
 
     pawn_move pawnMove;
     pawnMove.color = game.turn;
     pawnMove.type = command;
     pawnMove.initial = initialField;
+    pawnMove.final = finalField;
 
     return pawnMove;
 }
@@ -97,40 +96,53 @@ void PlayTurn(game* game) {
     SortDice(game->dice);
     SetPossibleMoveSizes(game->dice, game->moveSize);
 
-    printf("%d %d", game->dice[0], game->dice[1]);
+    printf("%d %d\n", game->dice[0], game->dice[1]);
 
     while (IsAnyMovePossible(game->board, game->bar, game->turn, game->dice)) {
+        PrintBoard(game->board, game->bar, game->finish);
         pawn_move forced_move = IsThereForcedMove(game->board, game->bar, game->finish, game->turn, game->moveSize);
 
         if (forced_move.type == BAR_INIT)
             printf("You have to init pawn\n");
         if (forced_move.type == ATTACK_SIGN)
-            printf("You have to beat pawn on field %d\n", forced_move.final);
+            printf("You have to beat pawn on field %d\n", forced_move.final+1);
 
         pawn_move move = MoveMenu(*game);
 
-        if (move.type != forced_move.type)
+        int mvRat = CheckIsMovePossible(game->board.fields[move.final], game->turn);
+
+        if (mvRat == NOT_POSSIBLE_MOVE) {
+            printf("move is not possible\n");
+            continue;
+        }
+
+        if (forced_move.type != NOT_SET && move.type != forced_move.type)
             continue;
         if (move.type == ATTACK_SIGN && move.final != forced_move.final)
             continue;
+
+        if (mvRat == ATTACK_MOVE)
+            BeatPawn(&game->board, &game->bar, move);
+
+        MovePawnOnBoard(&game->board, move);
     }
 
     ChangeTurn(game);
 }
 
 void PlayRound(game* game) {
-    /*while (!CheckWinner(*game)) {
-        printf("%s's turn, press key to roll the dice...", game->turn == RED ? "RED" : "WHITE");
-        scanf("");
-
-        pawn_move forced = IsThereForcedMove(*game);
-
-        if (forced.type != NOT_SET) {
-            printf("There is FORCED move, press key to continue");
-        }
-    }*/
+    while (!CheckWinner(*game)) {
+        printf("%s's turn, roll the dice...", game->turn == RED ? "RED" : "WHITE");
+        PlayTurn(game);
+    }
 
     printf("Winner: %c", game->turn);
+}
+
+void InitGame(game* game) {
+    SetUpGame(game);
+    StartRound(game);
+    PlayRound(game);
 }
 
 void RollDice(game* game) {
@@ -169,12 +181,11 @@ void SetPossibleMoveSizes(int dice[MAX_DICES], int moveSize[MAX_DICES]) {
         if (IsItDouble(dice))
             moveSize[i] = dice[0] * (i+1);
         else if (i < DICE_AMOUNT)
-            moveSize[i] = dice[1];
-        else if (i == DICE_AMOUNT) {
-            for (int j = 0; j < i; j++) {
+            moveSize[i] = dice[i];
+        else if (i == DICE_AMOUNT)
+            for (int j = 0; j < i; j++)
                 moveSize[i] += dice[j];
-            }
-        } else
+        else
             moveSize[i] = 0;
     }
 }

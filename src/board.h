@@ -7,8 +7,8 @@
 #include "field.h"
 #include "move.h"
 
-#define BOARD_PATTERN "B0000E0C000EE000C0E0000B"
-#define PAWN_COLORS "W0000R0R000WR000W0W0000R"
+#define BOARD_PATTERN "BAAAAE0C000EE000C0EAAAAB"
+#define PAWN_COLORS "WRRRRR0R000WR000W0WWWWWR"
 
 #define FIELDS 24
 #define HOME_FIELDS 6
@@ -28,12 +28,12 @@ void InitBoard(board* board);
 void PrintBoard(board board, bar bar, finish finish);
 pawn_move IsThereForcedMove(board board, bar bar, finish finish, char color, int moveSize[MAX_DICES]);
 int CountPawnsOnBoard(board board, char color, int category);
-pawn_move ForcedAttack(board board, char color, int moveSize[MAX_DICES]);
+void ForcedAttack(board board, char color, int moveSize[MAX_DICES], pawn_move* move);
 int IsBarInitAttackPossible(bar bar, board board, char color, int dice[MAX_DICES]);
-void MovePawnOnBoard(board* board, char color, int initialField, int finalField);
+void MovePawnOnBoard(board* board, pawn_move move);
 void MovePawnFromBar(bar* bar, board* board, char color, int fieldId);
 void MovePawnToFinish(board* board, finish* finish, char color, int fieldId);
-void BeatPawn(board* board, bar* bar, char color, int fieldId);
+void BeatPawn(board* board, bar* bar, pawn_move move);
 int IsBarEmpty(bar bar, char color);
 int ReversedFieldId(int id);
 
