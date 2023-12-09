@@ -108,7 +108,7 @@ void PlayTurn(game* game) {
 
     SetDicesIfDouble(game->dice);
 
-    while (IsAnyMovePossible(game->board, game->bar, game->turn, game->dice)) {
+    while (IsAnyMovePossible(game->board, game->bar, game->turn, game->dice) && !IsDiceEmpty(game->dice)) {
         DiceConf(game->dice, game->moveSize);
         PrintBoard(game->board, game->bar, game->finish);
         pawn_move forcedMove = IsThereForcedMove(game->board, game->bar, game->finish,
@@ -166,6 +166,14 @@ void InitGame(game* game) {
 void RollDice(game* game) {
     for (int i = 0; i < DICE_AMOUNT; i++)
         game->dice[i] = rand() % 6 + 1;
+}
+
+int IsDiceEmpty(const int dice[MAX_DICES]) {
+    for (int i = 0; i < MAX_DICES; i++) {
+        if (dice[i] != 0)
+            return 0;
+    }
+    return 1;
 }
 
 void SortDice(int dice[MAX_DICES]) {
