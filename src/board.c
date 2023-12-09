@@ -159,9 +159,6 @@ int IsBarInitAttackPossible(bar bar, board board, char color, int dice[MAX_DICES
     if (IsBarEmpty(bar, color))
         return -1;
 
-    if (dice[0] == dice[1])
-        return FieldIdByColor(dice[0], color);
-
     for (int i = 0; i < MAX_DICES; i++) {
         if (dice[i] == 0)
             return -1;
@@ -216,6 +213,7 @@ void ForcedAttack(board board, char color, int moveSize[MAX_DICES], pawn_move* m
 pawn_move IsThereForcedMove(board board, bar bar, finish finish, char color, int moveSize[MAX_DICES], int dice[MAX_DICES]) {
     pawn_move forcedMove;
     forcedMove.type = NOT_SET;
+    forcedMove.final = -1;
 
     int barInitAttack = IsBarInitAttackPossible(bar, board, color, dice);
 
@@ -227,6 +225,7 @@ pawn_move IsThereForcedMove(board board, bar bar, finish finish, char color, int
     }
 
     ForcedAttack(board, color, moveSize, &forcedMove);
+
     if (forcedMove.type == ATTACK_SIGN)
         return forcedMove;
 

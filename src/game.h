@@ -34,5 +34,6 @@ int IsAnyMovePossible(board board, bar bar, char color, int dice[DICE_AMOUNT]);
 void SetPossibleMoveSizes(int dice[MAX_DICES], int moveSize[MAX_DICES]);
 void SortDice(int dice[DICE_AMOUNT]);
 void RemoveDice(int dice[MAX_DICES], int value);
+int IsDiceEmpty(const int dice[MAX_DICES]);
 
 #endif //BACKGAMMON_GAME_H

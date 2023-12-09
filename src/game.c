@@ -127,20 +127,20 @@ void PlayTurn(game* game) {
             continue;
         }
 
-        if (forcedMove.type != NOT_SET && move.type != forcedMove.type || move.final != forcedMove.final) {
+        if (forcedMove.final != -1 && forcedMove.type != NOT_SET && move.final != forcedMove.final) {
             printf("YOU HAVE TO MAKE FORCED MOVE\n");
             continue;
         }
 
-        if (move.type == ATTACK_SIGN || (move.type == INIT_BAR_SIGN && move.final != -1))
+        if (move.type == ATTACK_SIGN || (move.type == INIT_BAR_SIGN && mvRat == ATTACK_MOVE))
             BeatPawn(&game->board, &game->bar, move);
         if (move.type == INIT_BAR_SIGN)
             MovePawnFromBar(&game->bar, &game->board, game->turn, move.final);
-        if (mvRat == CLEAN_MOVE || mvRat == ATTACK_MOVE)
+        if ((mvRat == CLEAN_MOVE || mvRat == ATTACK_MOVE) && move.type != INIT_BAR_SIGN)
             MovePawnOnBoard(&game->board, move);
 
         int multiplier = game->turn == RED ? -1 : 1;
-        int moveSize = move.type != INIT_BAR_SIGN ? move.initial : FieldIdByColor(multiplier,  game->turn)
+        int moveSize = (move.type != INIT_BAR_SIGN ? move.initial : FieldIdByColor(multiplier,  game->turn))
                 + move.final * multiplier;
         RemoveDice(game->dice, moveSize);
     }
@@ -220,6 +220,8 @@ void SetPossibleMoveSizes(int dice[MAX_DICES], int moveSize[MAX_DICES]) {
     for (int i = ctr; i < MAX_DICES; i++) {
         moveSize[i] = 0;
     }
+    if (dice[0] && dice[1])
+        moveSize[2] = dice[0] + dice[1] ;
 }
 
 void ResetMovesOrDices(int arr[MAX_DICES]) {
