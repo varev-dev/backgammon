@@ -106,10 +106,12 @@ void PlayTurn(game* game) {
     if (game->dice[0] == 0)
         RollDice(game);
 
+    game->dice[0] = 1;
+    game->dice[1] = 1;
     SetDicesIfDouble(game->dice);
+    DiceConf(game->dice, game->moveSize);
 
     while (IsAnyMovePossible(game->board, game->bar, game->turn, game->dice) && !IsDiceEmpty(game->dice)) {
-        DiceConf(game->dice, game->moveSize);
         PrintBoard(game->board, game->bar, game->finish);
         pawn_move forcedMove = IsThereForcedMove(game->board, game->bar, game->finish,
                                                   game->turn, game->moveSize, game->dice);
@@ -143,18 +145,19 @@ void PlayTurn(game* game) {
         int moveSize = (move.type != INIT_BAR_SIGN ? move.initial : FieldIdByColor(multiplier,  game->turn))
                 + move.final * multiplier;
         RemoveDice(game->dice, moveSize);
+        DiceConf(game->dice, game->moveSize);
     }
 
     ChangeTurn(game);
 }
 
 void PlayRound(game* game) {
-    while (CheckWinner(*game)) {
-        printf("%s's turn, roll the dice...\n", game->turn == RED ? "RED" : "WHITE");
+    while (!CheckWinner(*game)) {
+        printf("%s's turn, roll the dice...\n", colorString(game->turn));
         PlayTurn(game);
     }
 
-    printf("Winner: %c", game->turn);
+    printf("Winner: %s", colorString(game->turn));
 }
 
 void InitGame(game* game) {
@@ -216,7 +219,7 @@ void SetDicesIfDouble(int dice[MAX_DICES]) {
 }
 
 void SetPossibleMoveSizes(int dice[MAX_DICES], int moveSize[MAX_DICES]) {
-    int ctr = 0;
+    int ctr = MAX_DICES;
     for (int i = 0; i < MAX_DICES; i++) {
         if (dice[i] == 0)
             ctr = i;
@@ -228,7 +231,7 @@ void SetPossibleMoveSizes(int dice[MAX_DICES], int moveSize[MAX_DICES]) {
     for (int i = ctr; i < MAX_DICES; i++) {
         moveSize[i] = 0;
     }
-    if (dice[0] && dice[1])
+    if (dice[0] && dice[1] && dice[0] != dice[1])
         moveSize[2] = dice[0] + dice[1] ;
 }
 
@@ -265,10 +268,10 @@ void StartRound(game* game) {
     game->currentRound++;
 
     InitBoard(&game->board);
-    /*InitField(&game->bar.white_pawns);
-    InitField(&game->bar.red_pawns);*/
-    InitFieldWIthData(&game->bar.white_pawns, WHITE, 1);
-    InitFieldWIthData(&game->bar.red_pawns, RED, 1);
+    InitField(&game->bar.white_pawns);
+    InitField(&game->bar.red_pawns);
+    /*InitFieldWIthData(&game->bar.white_pawns, WHITE, 1);
+    InitFieldWIthData(&game->bar.red_pawns, RED, 1);*/
     InitField(&game->finish.white_pawns);
     InitField(&game->finish.red_pawns);
 

@@ -44,3 +44,7 @@ void InitFieldWIthData(field* field, char color, int pawns) {
     field->color = color;
     field->pawnsCounter = pawns;
 }
+
+char* colorString(char color) {
+    return color == RED ? "RED" : "WHITE";
+}
