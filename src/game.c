@@ -50,7 +50,7 @@ void ChooseValueFromArray(int arr[MAX_DICES], int* size, char* type) {
 void ChooseField(char* name, int* fieldId) {
     printf("Choose %s field (1-24)\n", name);
 
-    while (*fieldId >= 24 || *fieldId < 0) {
+    while (*fieldId >= 24 || *fieldId <0) {
         scanf("%d", fieldId);
         (*fieldId)--;
     }
@@ -91,17 +91,25 @@ pawn_move MoveMenu(game game) {
     return pawnMove;
 }
 
+void DiceConf(int dice[MAX_DICES], int moveSize[MAX_DICES]) {
+    SortDice(dice);
+    SetPossibleMoveSizes(dice, moveSize);
+    for (int i = 0; i < MAX_DICES; i++)
+        printf("%d ", dice[i]);
+    printf("\n");
+    for (int i = 0; i < MAX_DICES; i++)
+        printf("%d ", moveSize[i]);
+    printf("\n");
+}
+
 void PlayTurn(game* game) {
     if (game->dice[0] == 0)
         RollDice(game);
 
     SetDicesIfDouble(game->dice);
-    SortDice(game->dice);
-    SetPossibleMoveSizes(game->dice, game->moveSize);
-
-    printf("%d %d\n", game->dice[0], game->dice[1]);
 
     while (IsAnyMovePossible(game->board, game->bar, game->turn, game->dice)) {
+        DiceConf(game->dice, game->moveSize);
         PrintBoard(game->board, game->bar, game->finish);
         pawn_move forcedMove = IsThereForcedMove(game->board, game->bar, game->finish,
                                                   game->turn, game->moveSize, game->dice);
@@ -130,6 +138,11 @@ void PlayTurn(game* game) {
             MovePawnFromBar(&game->bar, &game->board, game->turn, move.final);
         if (mvRat == CLEAN_MOVE || mvRat == ATTACK_MOVE)
             MovePawnOnBoard(&game->board, move);
+
+        int multiplier = game->turn == RED ? -1 : 1;
+        int moveSize = move.type != INIT_BAR_SIGN ? move.initial : FieldIdByColor(multiplier,  game->turn)
+                + move.final * multiplier;
+        RemoveDice(game->dice, moveSize);
     }
 
     ChangeTurn(game);
@@ -137,7 +150,7 @@ void PlayTurn(game* game) {
 
 void PlayRound(game* game) {
     while (CheckWinner(*game)) {
-        printf("%s's turn, roll the dice...", game->turn == RED ? "RED" : "WHITE");
+        printf("%s's turn, roll the dice...\n", game->turn == RED ? "RED" : "WHITE");
         PlayTurn(game);
     }
 
@@ -155,11 +168,15 @@ void RollDice(game* game) {
         game->dice[i] = rand() % 6 + 1;
 }
 
-void SortDice(int dice[DICE_AMOUNT]) {
-    if (dice[1] < dice[0]) {
-        int temp = dice[0];
-        dice[0] = dice[1];
-        dice[1] = temp;
+void SortDice(int dice[MAX_DICES]) {
+    for (int i = 0; i < MAX_DICES; i++) {
+        for (int j = 0; j < MAX_DICES-i-1; j++) {
+            if ((dice[j] > dice[j+1] && dice[j+1] != 0) || dice[j] == 0) {
+                int temp = dice[j];
+                dice[j] = dice[j+1];
+                dice[j+1] = temp;
+            }
+        }
     }
 }
 
@@ -172,6 +189,15 @@ int IsItDouble(const int dice[DICE_AMOUNT]) {
     return 1;
 }
 
+void RemoveDice(int dice[MAX_DICES], int value) {
+    for (int i = 0; i < MAX_DICES; i++) {
+        if (dice[i] == value) {
+            dice[i] = 0;
+            break;
+        }
+    }
+}
+
 void SetDicesIfDouble(int dice[MAX_DICES]) {
     for (int i = DICE_AMOUNT; i < MAX_DICES; i++) {
         if (IsItDouble(dice))
@@ -182,16 +208,17 @@ void SetDicesIfDouble(int dice[MAX_DICES]) {
 }
 
 void SetPossibleMoveSizes(int dice[MAX_DICES], int moveSize[MAX_DICES]) {
+    int ctr = 0;
     for (int i = 0; i < MAX_DICES; i++) {
+        if (dice[i] == 0)
+            ctr = i;
         if (IsItDouble(dice))
-            moveSize[i] = dice[0] * (i+1);
-        else if (i < DICE_AMOUNT)
-            moveSize[i] = dice[i];
-        else if (i == DICE_AMOUNT)
-            for (int j = 0; j < i; j++)
-                moveSize[i] += dice[j];
+            moveSize[i] = dice[0] * (i + 1);
         else
-            moveSize[i] = 0;
+            moveSize[i] = dice[i];
+    }
+    for (int i = ctr; i < MAX_DICES; i++) {
+        moveSize[i] = 0;
     }
 }
 

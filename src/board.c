@@ -26,8 +26,7 @@ void InitBoard(board* board) {
 }
 
 void PrintAdditional(struct SECTION_WITH_COUNTER swc, char color) {
-    printf("%c %d", color == RED ? 'R' : 'W',
-           color == RED ? swc.red_pawns.pawnsCounter : swc.white_pawns.pawnsCounter);
+    printf("%c %d", color, color == RED ? swc.red_pawns.pawnsCounter : swc.white_pawns.pawnsCounter);
 }
 
 void PrintBoardTags(char mode) {
@@ -72,6 +71,10 @@ void PrintBoard(board board, bar bar, finish finish) {
 
 int ReversedFieldId(int id) {
     return FIELDS - id - 1;
+}
+
+char ReversedColor(char color) {
+    return color == RED ? WHITE : RED;
 }
 
 int FieldIdByColor(int fieldId, char color) {
@@ -186,10 +189,8 @@ void ClosestPossibleAttack(board board, char color, const int moveSize[MAX_DICES
         for (int i = 0; i < MAX_DICES; i++) {
             int finalField = fieldId + moveSize[i] * mult;
 
-            if (finalField >= FIELDS || finalField < 0) {
-                color == WHITE ? fieldId++ : fieldId--;
+            if (finalField >= FIELDS || finalField < 0)
                 continue;
-            }
 
             if (CheckIsMovePossible(board.fields[finalField], color) == ATTACK_MOVE &&
                 init + mult * finalField < init + mult * (move->final)) {
@@ -207,7 +208,7 @@ void ForcedAttack(board board, char color, int moveSize[MAX_DICES], pawn_move* m
 
     ClosestPossibleAttack(board, color, moveSize, move);
 
-    if (move->final != FIELDS)
+    if (move->final != FieldIdByColor(24, color))
         move->type = ATTACK_SIGN;
 }
 
@@ -220,7 +221,7 @@ pawn_move IsThereForcedMove(board board, bar bar, finish finish, char color, int
 
     if (!IsBarEmpty(bar, color)) {
         forcedMove.type = INIT_BAR_SIGN;
-        if (barInitAttack != -1 && barInitAttack != 24)
+        if (barInitAttack != -1)
             forcedMove.final = barInitAttack;
         return forcedMove;
     }
