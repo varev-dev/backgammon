@@ -7,8 +7,8 @@
 #include "field.h"
 #include "move.h"
 
-#define BOARD_PATTERN   "A0B0B0A0000000000A0B0B0A"
-#define PAWN_COLORS     "W0R0R0R0000000000W0W0W0R"
+#define BOARD_PATTERN   "A0000000000000000000000A"
+#define PAWN_COLORS     "R0000000000000000000000W"
 
 #define FIELDS 24
 #define HOME_FIELDS 6
@@ -24,7 +24,7 @@ typedef struct SECTION_WITH_COUNTER {
     field white_pawns;
 } bar, finish;
 
-void InitBoard(board* board);
+void InitBoard(board* board, char* pattern, char* color);
 void PrintBoard(board board, bar bar, finish finish);
 pawn_move IsThereForcedMove(board board, bar bar, char color, int moveSize[MAX_DICES], int dice[MAX_DICES]);
 int IsMoveFromFieldPossible(board board, char color, int fieldId, const int dice[DICE_AMOUNT]);
@@ -47,6 +47,7 @@ int CheckFinishMove(board board, char color, int fieldId, int dice[MAX_DICES]);
 int ForcedFinishFieldId(board board, char color, int dice[MAX_DICES]);
 int MaxDiceValue(const int dice[MAX_DICES]);
 char ReversedColor(char color);
+int PawnsOnFinish(finish finish, char color);
 int Mlp(char color);
 
 #endif //BACKGAMMON_BOARD_H

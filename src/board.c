@@ -21,8 +21,8 @@ void InitFields(board* board, const char* pawns, const char* colors) {
     }
 }
 
-void InitBoard(board* board) {
-    InitFields(board, BOARD_PATTERN, PAWN_COLORS);
+void InitBoard(board* board, char* pattern, char* color) {
+    InitFields(board, pattern, color);
 }
 
 void PrintAdditional(struct SECTION_WITH_COUNTER swc, char color) {
@@ -113,6 +113,10 @@ int IsMoveFromBarPossible(board board, char color, int dice[DICE_AMOUNT]) {
     }
 
     return 0;
+}
+
+int PawnsOnFinish(finish finish, char color) {
+    return color == RED ? finish.red_pawns.pawnsCounter : finish.white_pawns.pawnsCounter;
 }
 
 int IsMoveWithSizeFromBoardPossible(board board, char color, int moveSize) {

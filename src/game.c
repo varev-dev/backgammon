@@ -1,8 +1,10 @@
 #include "game.h"
 
-void SetUpGame(game* game) {
-    int rounds;
-    game->score[0] = game->score[1] = rounds = game->currentRound = 0;
+void SetUpGame(game* game, int current, int rounds, int score[2]){
+    game->rounds = rounds;
+    game->currentRound = current;
+    game->score[0] = score[0];
+    game->score[1] = score[1];
 
     while (rounds < 1 || rounds > MAX_ROUNDS) {
         printf("How many rounds (1-%d):", MAX_ROUNDS);
@@ -112,8 +114,6 @@ void DiceConf(int dice[MAX_DICES], int moveSize[MAX_DICES]) {
 
 void PlayTurn(game* game) {
     RollDice(game);
-    game->dice[0] = 2;
-    game->dice[1] = 4;
     SetDicesIfDouble(game->dice);
     DiceConf(game->dice, game->moveSize);
 
@@ -213,8 +213,6 @@ void RemoveDiceFromMove(board board, pawn_move move, char color, int dice[MAX_DI
         moveSize = move.final - move.initial;
     moveSize = Abs(moveSize);
 
-    printf("\n\n%d %d %d\n\n", moveSize, FieldIdByColor(-1,  color) , move.final);
-
     if (move.type == FINISH_SIGN) {
         RemoveDiceIfFinish(board, dice, color, move);
     } else {
@@ -222,22 +220,164 @@ void RemoveDiceFromMove(board board, pawn_move move, char color, int dice[MAX_DI
     }
 }
 
-void PlayRound(game* game) {
-    while (!CheckWinner(*game)) {
+void addBoardToSave(game game, char* txt, int* ctr) {
+    for (int i = 0; i < FIELDS; i++) {
+        int pawns = game.board.fields[i].pawnsCounter;
+
+        txt[(*ctr)++] = pawns == 0 ? '0' : pawns + 'A' - 1;
+    }
+    for (int i = 0; i < FIELDS; i++) {
+        int clr = game.board.fields[i].color;
+        txt[(*ctr)++] = clr == 'N' ? '0' : clr;
+    }
+}
+
+char* buildGameSave(game game) {
+    char* txt = malloc(SAVE_SIZE * sizeof(char));
+    int ctr = 0;
+
+    txt[ctr++] = game.currentRound + '0';
+    txt[ctr++] = game.rounds + '0';
+    txt[ctr++] = game.score[0] + '0';
+    txt[ctr++] = game.score[1] + '0';
+    addBoardToSave(game, txt, &ctr);
+    txt[ctr++] = game.bar.white_pawns.pawnsCounter + '0';
+    txt[ctr++] = game.bar.red_pawns.pawnsCounter + '0';
+    txt[ctr++] = game.finish.white_pawns.pawnsCounter + '0';
+    txt[ctr++] = game.finish.red_pawns.pawnsCounter + '0';
+    txt[ctr++] = game.turn;
+    txt[ctr] = '\0';
+
+    return txt;
+}
+
+void SaveGame(game game) {
+    printf("enter file name: ");
+    char name[50];
+    scanf("%s", name);
+    FILE * file = fopen(name, "w");
+    if (file == NULL) {
+        printf("save error");
+        exit(0);
+    }
+    fwrite(buildGameSave(game), sizeof(char), SAVE_SIZE, file);
+    fclose(file);
+}
+
+void ChooseSaveOrPlayTurn(game* game) {
+    char comm = 1;
+    printf("(Q) - Quit, (S) - Save Game and Quit, (P) - Play turn\n");
+
+    while (comm != 'Q' && comm != 'S' && comm != 'P') {
+        scanf("%c", &comm);
+    }
+
+    if (comm == 'Q')
+        exit(0);
+    if (comm == 'S') {
+        SaveGame(*game);
+        exit(0);
+    }
+    if (comm == 'P') {
         printf("%s's turn, roll the dice...\n", colorString(game->turn));
         PlayTurn(game);
+    }
+}
+
+void PlayRound(game* game) {
+    while (!CheckWinner(*game)) {
+        ChooseSaveOrPlayTurn(game);
         if (!CheckWinner(*game))
             ChangeTurn(game);
     }
     PrintBoard(game->board, game->bar, game->finish);
+    int pts = 1;
+    if (!IsBarEmpty(game->bar, ReversedColor(game->turn))) {
+        pts = 3;
+    } else if (PawnsOnFinish(game->finish, ReversedColor(game->turn))) {
+        pts = 2;
+    }
 
-    printf("Winner: %s", colorString(game->turn));
+    game->score[game->turn==RED] += pts;
+
+    printf("Round no. %d Winner: %s", game->currentRound,colorString(game->turn));
+}
+
+void LoadSWCFromFile(struct SECTION_WITH_COUNTER * swc, char fill[2]) {
+    InitFieldWIthData(&swc->white_pawns, WHITE, fill[0] - '0');
+    InitFieldWIthData(&swc->red_pawns, RED, fill[1] - '0');
+}
+
+void BindFromFileToVars(game* game, FILE* file, char round[2], char score[2], char board_pattern[25],
+                        char board_color[25], char bar[2], char finish[2], char* color) {
+    fread(round, sizeof(char), 2, file);
+    fread(score, sizeof(char), 2, file);
+    fread(board_pattern, sizeof(char), 24, file);
+    board_pattern[24] = '\0';
+    fread(board_color, sizeof(char), 24, file);
+    board_color[24] = '\0';
+    fread(bar, sizeof(char), 2, file);
+    fread(finish, sizeof(char), 2, file);
+    fread(color, sizeof(char), 1, file);
+    InitBoard(&game->board, board_pattern, board_color);
+}
+
+void LoadGame(game* game) {
+    char name[50];
+    printf("Enter file name:");
+    scanf("%s", name);
+
+    int ctr = 1;
+    FILE * file = fopen(name, "rb");
+
+    if (file == NULL) {
+        printf("File not found.");
+        exit(0);
+    }
+    char round[2], score[2], board_pattern[25], board_color[25], bar[2], finish[2], color;
+    BindFromFileToVars(game, file, round, score, board_pattern, board_color, bar, finish, &color);
+    game->currentRound = round[0] - '0';
+    game->rounds = round[1] - '0';
+    game->score[0] = score[0] - '0';
+    game->score[1] = score[1] - '0';
+    game->turn = color;
+    LoadSWCFromFile(&game->bar, bar);
+    LoadSWCFromFile(&game->finish, finish);
+    fclose(file);
+}
+
+void LoadOrNewGame(game* game) {
+    char command = 0;
+
+    printf("(N) - New Game, (L) - Load Game");
+
+    while (command != 'N' && command != 'L') {
+        scanf("%c", &command);
+    }
+
+    if (command == 'N') {
+        int empty[] = {0,0};
+        SetUpGame(game, 0, 0, empty);
+        game->currentRound++;
+        StartRound(game, empty, empty);
+    } else {
+        LoadGame(game);
+    }
 }
 
 void InitGame(game* game) {
-    SetUpGame(game);
-    StartRound(game);
-    PlayRound(game);
+    LoadOrNewGame(game);
+    while (game->currentRound <= game->rounds) {
+        PlayRound(game);
+        printf("Score: WHITE - %d, RED - %d,", game->score[0], game->score[1]);
+    }
+
+    if (game->score[0] > game->score[1])
+        printf("RED WIN");
+    else if (game->score[0] < game->score[1])
+        printf("RED WIN");
+    else
+        printf("DRAW");
 }
 
 void RollDice(game* game) {
@@ -302,9 +442,8 @@ void SetPossibleMoveSizes(int dice[MAX_DICES], int moveSize[MAX_DICES]) {
         else
             moveSize[i] = dice[i];
     }
-    for (int i = ctr; i < MAX_DICES; i++) {
+    for (int i = ctr; i < MAX_DICES; i++)
         moveSize[i] = 0;
-    }
     if (dice[0] && dice[1] && dice[0] != dice[1])
         moveSize[2] = dice[0] + dice[1] ;
 }
@@ -338,16 +477,12 @@ void ChangeTurn(game* game) {
     game->turn = game->turn == WHITE ? RED : WHITE;
 }
 
-void StartRound(game* game) {
-    game->currentRound++;
-
-    InitBoard(&game->board);
-    InitField(&game->bar.white_pawns);
-    InitField(&game->bar.red_pawns);
-    /*InitFieldWIthData(&game->bar.white_pawns, WHITE, 1);
-    InitFieldWIthData(&game->bar.red_pawns, RED, 1);*/
-    InitField(&game->finish.white_pawns);
-    InitField(&game->finish.red_pawns);
+void StartRound(game* game, int bar[2], int finish[2]) {
+    InitBoard(&game->board, BOARD_PATTERN, PAWN_COLORS);
+    InitFieldWIthData(&game->bar.white_pawns, WHITE, bar[0]);
+    InitFieldWIthData(&game->bar.red_pawns, RED, bar[1]);
+    InitFieldWIthData(&game->finish.white_pawns, WHITE, finish[0]);
+    InitFieldWIthData(&game->finish.red_pawns, RED, finish[1]);
 
     game->turn = NEUTRAL;
     SetFirstTurn(game);

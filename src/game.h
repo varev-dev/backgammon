@@ -5,6 +5,7 @@
 
 #include "board.h"
 
+#define SAVE_SIZE 59
 #define BAR_INIT (-2)
 #define NO_FORCED_MOVE (-1)
 
@@ -28,7 +29,7 @@ void RollDice(game* game);
 void SetDicesIfDouble(int dice[DICE_AMOUNT]);
 void SetFirstTurn(game* game);
 void ChangeTurn(game* game);
-void StartRound(game* game);
+void StartRound(game* game, int bar[2], int finish[2]);
 int CheckWinner(game game);
 void SetPossibleMoveSizes(int dice[MAX_DICES], int moveSize[MAX_DICES]);
 void SortDice(int dice[DICE_AMOUNT]);
