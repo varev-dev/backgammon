@@ -501,17 +501,18 @@ void SetDicesIfDouble(int dice[MAX_DICES]) {
 void SetPossibleMoveSizes(int dice[MAX_DICES], int moveSize[MAX_DICES]) {
     int ctr = MAX_DICES;
     for (int i = 0; i < MAX_DICES; i++) {
-        if (dice[i] == 0)
+        if (dice[i] == 0 && ctr > i)
             ctr = i;
         if (IsItDouble(dice))
             moveSize[i] = dice[0] * (i + 1);
         else
             moveSize[i] = dice[i];
     }
-    for (int i = ctr; i < MAX_DICES; i++)
+    for (int i = ctr; i < MAX_DICES; i++) {
         moveSize[i] = 0;
+    }
     if (dice[0] && dice[1] && dice[0] != dice[1])
-        moveSize[2] = dice[0] + dice[1] ;
+        moveSize[2] = dice[0] + dice[1];
 }
 
 void ResetMovesOrDices(int arr[MAX_DICES]) {
