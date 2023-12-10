@@ -10,8 +10,10 @@
 #define NO_FORCED_MOVE (-1)
 
 #define MAX_ROUNDS 15
+#define SAVE_NAME "moves-save"
 
 typedef struct GAME {
+    FILE * file;
     int score[2];
     int rounds;
     int currentRound;

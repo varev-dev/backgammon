@@ -1,10 +1,14 @@
 #include "game.h"
 
-void SetUpGame(game* game, int current, int rounds, int score[2]){
+void SetUpFields(game* game, int current, int rounds, int score[2]) {
     game->rounds = rounds;
     game->currentRound = current;
     game->score[0] = score[0];
     game->score[1] = score[1];
+}
+
+void SetUpGame(game* game, int current, int rounds, int score[2]){
+    SetUpFields(game, current, rounds, score);
 
     while (rounds < 1 || rounds > MAX_ROUNDS) {
         printf("How many rounds (1-%d):", MAX_ROUNDS);
@@ -47,7 +51,7 @@ void ChooseValueFromArray(int arr[MAX_DICES], int* size, char* type) {
         printf("Choose %s by id:", type);
         scanf("%d", size);
 
-        if (*size-1 >= 0 && *size < MAX_DICES && arr[*size - 1] != 0) {
+        if (*size-1 >= 0 && *size-1 < MAX_DICES && arr[*size - 1] != 0) {
             *size = arr[*size - 1];
             break;
         }
@@ -112,19 +116,80 @@ void DiceConf(int dice[MAX_DICES], int moveSize[MAX_DICES]) {
     printf("\n");
 }
 
-void PlayTurn(game* game) {
+void Dices(game* game) {
     RollDice(game);
     SetDicesIfDouble(game->dice);
     DiceConf(game->dice, game->moveSize);
+}
 
-    while (IsAnyMovePossible(game->board, game->bar, game->turn, game->dice) && !IsDiceEmpty(game->dice) && !CheckWinner(*game)) {
+void PrintForced(pawn_move forcedMove) {
+    if (forcedMove.type == INIT_BAR_SIGN)
+        printf("You have to init pawn\n");
+    if (forcedMove.type == ATTACK_SIGN || (forcedMove.type == INIT_BAR_SIGN && forcedMove.final != -1))
+        printf("You have to beat pawn on field %d\n", forcedMove.final+1);
+}
+
+int CheckForced(pawn_move mv, pawn_move forced, game game) {
+    if (mv.type == FINISH_SIGN && !CheckFinishMove(game.board, game.turn, mv.initial, game.dice)) {
+        printf("YOU HAVE TO USE OTHER PAWN TO GET TO FINISH\n");
+        return 0;
+    } else if ((forced.type == INIT_BAR_SIGN && mv.type != INIT_BAR_SIGN) ||
+            (forced.final != -1 && forced.type != NOT_SET && mv.final != forced.final)) {
+        printf("YOU HAVE TO MAKE FORCED MOVE\n");
+        return 0;
+    }
+
+    if (mv.type == FINISH_SIGN && !IsMoveToFinishPossible(game.board, game.turn, game.moveSize)) {
+        printf("YOU HAVE TO MOVE OTHER PAWN TO FINISH");
+        return 0;
+    }
+
+    return 1;
+}
+
+int TurnCondition(game game) {
+    return IsAnyMovePossible(game.board, game.bar, game.turn, game.dice) &&
+           !IsDiceEmpty(game.dice) && !CheckWinner(game);
+}
+
+int TurnMoveCheck(int mvRat, pawn_move move, game game) {
+    if ((mvRat == NOT_POSSIBLE_MOVE) ||
+        (move.type != FINISH_SIGN && (move.final < 0 || move.final >= FIELDS)) ||
+        (game.board.fields[move.initial].color != game.turn && move.type != INIT_BAR_SIGN && move.type != FINISH_SIGN)) {
+        printf("move is not possible\n");
+        return 0;
+    }
+
+    return 1;
+}
+
+void MakeMove(game* game, int mvRat, pawn_move move) {
+    if (mvRat == ATTACK_MOVE)
+        BeatPawn(&game->board, &game->bar, move);
+    if (move.type == INIT_BAR_SIGN)
+        MovePawnFromBar(&game->bar, &game->board, game->turn, move.final);
+    if (CheckFinishMove(game->board, game->turn, move.initial, game->dice) && move.type == FINISH_SIGN)
+        MovePawnToFinish(&game->board, &game->finish, game->turn, move.initial);
+    if ((mvRat == CLEAN_MOVE || mvRat == ATTACK_MOVE) && move.type != INIT_BAR_SIGN)
+        MovePawnOnBoard(&game->board, move);
+
+    RemoveDiceFromMove(game->board, move, game->turn, game->dice);
+    DiceConf(game->dice, game->moveSize);
+}
+
+void PrintNoMoveInfo(game game) {
+    if (!IsAnyMovePossible(game.board, game.bar, game.turn, game.dice))
+        printf("No possible moves\n");
+}
+
+void PlayTurn(game* game) {
+    Dices(game);
+
+    while (TurnCondition(*game)) {
         PrintBoard(game->board, game->bar, game->finish);
         pawn_move forcedMove = IsThereForcedMove(game->board, game->bar,game->turn, game->moveSize, game->dice);
 
-        if (forcedMove.type == INIT_BAR_SIGN)
-            printf("You have to init pawn\n");
-        if (forcedMove.type == ATTACK_SIGN || (forcedMove.type == INIT_BAR_SIGN && forcedMove.final != -1))
-            printf("You have to beat pawn on field %d\n", forcedMove.final+1);
+        PrintForced(forcedMove);
 
         pawn_move move = MoveMenu(*game);
         int mvRat = -1;
@@ -132,38 +197,13 @@ void PlayTurn(game* game) {
         if (move.type != FINISH_SIGN)
             mvRat = CheckIsMovePossible(game->board.fields[move.final], game->turn);
 
-        if (mvRat == NOT_POSSIBLE_MOVE || (move.final < 0 || move.final >= FIELDS || (game->board.fields[move.initial].color != game->turn && move.type != INIT_BAR_SIGN)) && move.type != FINISH_SIGN) {
-            printf("move is not possible\n");
+        if (!TurnMoveCheck(mvRat, move, *game) || !CheckForced(move, forcedMove, *game))
             continue;
-        }
 
-        if (move.type == FINISH_SIGN && !CheckFinishMove(game->board, game->turn, move.initial, game->dice)) {
-            printf("YOU HAVE TO USE OTHER PAWN TO GET TO FINISH\n");
-        } else if ((forcedMove.type == INIT_BAR_SIGN && move.type != INIT_BAR_SIGN) || (forcedMove.final != -1 && forcedMove.type != NOT_SET && move.final != forcedMove.final)) {
-            printf("YOU HAVE TO MAKE FORCED MOVE\n");
-            continue;
-        }
-
-        if (move.type == FINISH_SIGN && !IsMoveToFinishPossible(game->board, game->turn, game->moveSize)) {
-            printf("YOU HAVE TO MOVE OTHER PAWN TO FINISH");
-            continue;
-        }
-
-        if (mvRat == ATTACK_MOVE || (move.type == INIT_BAR_SIGN && mvRat == ATTACK_MOVE))
-            BeatPawn(&game->board, &game->bar, move);
-        if (move.type == INIT_BAR_SIGN)
-            MovePawnFromBar(&game->bar, &game->board, game->turn, move.final);
-        if (CheckFinishMove(game->board, game->turn, move.initial, game->dice) && move.type == FINISH_SIGN)
-            MovePawnToFinish(&game->board, &game->finish, game->turn, move.initial);
-        if ((mvRat == CLEAN_MOVE || mvRat == ATTACK_MOVE) && move.type != INIT_BAR_SIGN)
-            MovePawnOnBoard(&game->board, move);
-
-        RemoveDiceFromMove(game->board, move, game->turn, game->dice);
-        DiceConf(game->dice, game->moveSize);
+        MakeMove(game, mvRat, move);
     }
 
-    if (!IsAnyMovePossible(game->board, game->bar, game->turn, game->dice))
-        printf("No possible moves\n");
+    PrintNoMoveInfo(*game);
 }
 
 void RemoveDiceIfFinish(board board, int dice[MAX_DICES], char color, pawn_move move) {
@@ -300,7 +340,7 @@ void PlayRound(game* game) {
 
     game->score[game->turn==RED] += pts;
 
-    printf("Round no. %d Winner: %s", game->currentRound,colorString(game->turn));
+    printf("Round no. %d Winner: %s\n", game->currentRound,colorString(game->turn));
 }
 
 void LoadSWCFromFile(struct SECTION_WITH_COUNTER * swc, char fill[2]) {
@@ -366,10 +406,21 @@ void LoadOrNewGame(game* game) {
 }
 
 void InitGame(game* game) {
+    game->file = fopen(SAVE_NAME, "w");
+    fclose(game->file);
+    int r = 0;
+    int empty[2] = {0,0};
     LoadOrNewGame(game);
     while (game->currentRound <= game->rounds) {
+        if (r != 0) {
+            SetUpFields(game, 0, 0, empty);
+            StartRound(game, empty, empty);
+            RoundIntro(*game);
+        }
         PlayRound(game);
-        printf("Score: WHITE - %d, RED - %d,", game->score[0], game->score[1]);
+        printf("Score: WHITE - %d, RED - %d\n", game->score[0], game->score[1]);
+        game->currentRound++;
+        r++;
     }
 
     if (game->score[0] > game->score[1])
@@ -486,7 +537,6 @@ void StartRound(game* game, int bar[2], int finish[2]) {
 
     game->turn = NEUTRAL;
     SetFirstTurn(game);
-    RoundIntro(*game);
 }
 
 int CheckWinner(game game) {
