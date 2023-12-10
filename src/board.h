@@ -7,8 +7,8 @@
 #include "field.h"
 #include "move.h"
 
-#define BOARD_PATTERN   "A0B0B0A00000000000000000"
-#define PAWN_COLORS     "W0R0R0R00000000000000000"
+#define BOARD_PATTERN   "A0B0B0A0000000000A0B0B0A"
+#define PAWN_COLORS     "W0R0R0R0000000000W0W0W0R"
 
 #define FIELDS 24
 #define HOME_FIELDS 6
@@ -46,6 +46,7 @@ int IsAnyMoveOnBoardPossible(board board, char color, const int moveSize[MAX_DIC
 int CheckFinishMove(board board, char color, int fieldId, int dice[MAX_DICES]);
 int ForcedFinishFieldId(board board, char color, int dice[MAX_DICES]);
 int MaxDiceValue(const int dice[MAX_DICES]);
+char ReversedColor(char color);
 int Mlp(char color);
 
 #endif //BACKGAMMON_BOARD_H

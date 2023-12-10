@@ -195,14 +195,25 @@ void RemoveDiceIfNotFinish(int dice[MAX_DICES], int moveSize) {
             RemoveDice(dice, moveSize);
         }
     }
+}
 
+int Abs(int value) {
+    return value >= 0 ? value : value * (-1);
 }
 
 void RemoveDiceFromMove(board board, pawn_move move, char color, int dice[MAX_DICES]) {
     int mult = Mlp(color);
-    int moveSize = (move.type != INIT_BAR_SIGN ? move.initial : FieldIdByColor(-1,  color)) + move.final * mult;
+    int moveSize;
 
-    printf("%d\n\n", moveSize);
+    if (move.type == INIT_BAR_SIGN)
+        moveSize = Abs(FieldIdByColor(-1,  color)) + move.final * mult;
+    else if (color == RED)
+        moveSize = move.initial - move.final;
+    else
+        moveSize = move.final - move.initial;
+    moveSize = Abs(moveSize);
+
+    printf("\n\n%d %d %d\n\n", moveSize, FieldIdByColor(-1,  color) , move.final);
 
     if (move.type == FINISH_SIGN) {
         RemoveDiceIfFinish(board, dice, color, move);
@@ -217,8 +228,8 @@ void PlayRound(game* game) {
         PlayTurn(game);
         if (!CheckWinner(*game))
             ChangeTurn(game);
-        PrintBoard(game->board, game->bar, game->finish);
     }
+    PrintBoard(game->board, game->bar, game->finish);
 
     printf("Winner: %s", colorString(game->turn));
 }
