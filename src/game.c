@@ -105,6 +105,21 @@ pawn_move MoveMenu(game game) {
     return pawnMove;
 }
 
+int TextLength(const char* text) {
+    int counter = 1;
+
+    while (text[counter++] != '\0') {
+    }
+
+    return counter;
+}
+
+void WriteToFile(FILE* file, char* text) {
+    file = fopen(SAVE_NAME, "ab+");
+    fwrite(text, sizeof(char), TextLength(text) - 1, file);
+    fclose(file);
+}
+
 void DiceConf(int dice[MAX_DICES], int moveSize[MAX_DICES]) {
     SortDice(dice);
     SetPossibleMoveSizes(dice, moveSize);
@@ -172,7 +187,6 @@ void MakeMove(game* game, int mvRat, pawn_move move) {
         MovePawnToFinish(&game->board, &game->finish, game->turn, move.initial);
     if ((mvRat == CLEAN_MOVE || mvRat == ATTACK_MOVE) && move.type != INIT_BAR_SIGN)
         MovePawnOnBoard(&game->board, move);
-
     RemoveDiceFromMove(game->board, move, game->turn, game->dice);
     DiceConf(game->dice, game->moveSize);
 }
@@ -201,6 +215,7 @@ void PlayTurn(game* game) {
             continue;
 
         MakeMove(game, mvRat, move);
+        WriteToFile(game->file, moveToString(move));
     }
 
     PrintNoMoveInfo(*game);
@@ -367,7 +382,6 @@ void LoadGame(game* game) {
     printf("Enter file name:");
     scanf("%s", name);
 
-    int ctr = 1;
     FILE * file = fopen(name, "rb");
 
     if (file == NULL) {
@@ -421,6 +435,7 @@ void InitGame(game* game) {
         printf("Score: WHITE - %d, RED - %d\n", game->score[0], game->score[1]);
         game->currentRound++;
         r++;
+        //WriteToFile(game->file, "NEXT ROUND\n");
     }
 
     if (game->score[0] > game->score[1])
