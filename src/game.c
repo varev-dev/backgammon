@@ -20,7 +20,12 @@ void RoundIntro(game game) {
 }
 
 void LoadCommand(char* command) {
-    printf("Choose option: (B) move on board, (I) bar init\n");
+    printf("Choose option:\n");
+
+    printf("(%c) init pawn from bar\n", INIT_BAR_SIGN);
+    printf("(%c) move to finish\n", FINISH_SIGN);
+    printf("(%c) move from board\n", BOARD_MOVE_SIGN);
+
     while (*command != INIT_BAR_SIGN && *command != BOARD_MOVE_SIGN && *command != FINISH_SIGN) {
         scanf("%c", command);
     }
@@ -56,37 +61,40 @@ void ChooseField(char* name, int* fieldId) {
     }
 }
 
+void Command(char command, int* init, int* final, char color, int dice[MAX_DICES], int moveSize[MAX_DICES]) {
+    switch (command) {
+        case INIT_BAR_SIGN:
+            ChooseValueFromArray(dice, final, "dice");
+            if (color == RED) {
+                *final = ReversedFieldId(*final);
+                (*final)++;
+            } else
+                (*final)--;
+            break;
+        case FINISH_SIGN:
+            ChooseField("initial", init);
+            break;
+        case BOARD_MOVE_SIGN:
+            ChooseField("initial", init);
+            ChooseValueFromArray(moveSize, final, "move size");
+            (*final) = *init + (color == RED ? -1 : 1) * (*final);
+            break;
+    }
+}
+
 pawn_move MoveMenu(game game) {
     char command = 1;
     LoadCommand(&command);
-    int initialField = 25, finalField = 25;
+    int initial, final;
+    initial = final =  FieldIdByColor(FIELDS, game.turn);
 
-    switch (command) {
-        case INIT_BAR_SIGN:
-            ChooseValueFromArray(game.dice, &finalField, "dice");
-            if (game.turn == RED) {
-                finalField = ReversedFieldId(finalField);
-                finalField++;
-            } else
-                finalField--;
-            break;
-        case FINISH_SIGN:
-            ChooseField("initial", &initialField);
-            break;
-        case BOARD_MOVE_SIGN:
-            ChooseField("initial", &initialField);
-            ChooseValueFromArray(game.moveSize, &finalField, "move size");
-            finalField = initialField + (game.turn == RED ? -1 : 1) * finalField;
-            break;
-        default:
-            break;
-    }
+    Command(command, &initial, &final, game.turn, game.dice, game.moveSize);
 
     pawn_move pawnMove;
     pawnMove.color = game.turn;
     pawnMove.type = command;
-    pawnMove.initial = initialField;
-    pawnMove.final = finalField;
+    pawnMove.initial = initial;
+    pawnMove.final = final;
 
     return pawnMove;
 }
@@ -94,27 +102,23 @@ pawn_move MoveMenu(game game) {
 void DiceConf(int dice[MAX_DICES], int moveSize[MAX_DICES]) {
     SortDice(dice);
     SetPossibleMoveSizes(dice, moveSize);
-    for (int i = 0; i < MAX_DICES; i++)
+    for (int i = 0; i < MAX_DICES; i++) {
+        if (dice[i] == 0)
+            break;
         printf("%d ", dice[i]);
-    printf("\n");
-    for (int i = 0; i < MAX_DICES; i++)
-        printf("%d ", moveSize[i]);
+    }
     printf("\n");
 }
 
 void PlayTurn(game* game) {
-    if (game->dice[0] == 0)
-        RollDice(game);
+    RollDice(game);
 
-    game->dice[0] = 1;
-    game->dice[1] = 1;
     SetDicesIfDouble(game->dice);
     DiceConf(game->dice, game->moveSize);
 
-    while (IsAnyMovePossible(game->board, game->bar, game->turn, game->dice) && !IsDiceEmpty(game->dice)) {
+    while (IsAnyMovePossible(game->board, game->bar, game->turn, game->dice) && !IsDiceEmpty(game->dice) && !CheckWinner(*game)) {
         PrintBoard(game->board, game->bar, game->finish);
-        pawn_move forcedMove = IsThereForcedMove(game->board, game->bar, game->finish,
-                                                  game->turn, game->moveSize, game->dice);
+        pawn_move forcedMove = IsThereForcedMove(game->board, game->bar,game->turn, game->moveSize, game->dice);
 
         if (forcedMove.type == INIT_BAR_SIGN)
             printf("You have to init pawn\n");
@@ -122,39 +126,84 @@ void PlayTurn(game* game) {
             printf("You have to beat pawn on field %d\n", forcedMove.final+1);
 
         pawn_move move = MoveMenu(*game);
-        int mvRat = CheckIsMovePossible(game->board.fields[move.final], game->turn);
+        int mvRat = -1;
 
-        if (mvRat == NOT_POSSIBLE_MOVE) {
+        if (move.type != FINISH_SIGN)
+            mvRat = CheckIsMovePossible(game->board.fields[move.final], game->turn);
+
+        if (mvRat == NOT_POSSIBLE_MOVE || (move.final < 0 || move.final >= FIELDS || game->board.fields[move.initial].color != game->turn) && move.type != FINISH_SIGN) {
             printf("move is not possible\n");
             continue;
         }
 
-        if (forcedMove.final != -1 && forcedMove.type != NOT_SET && move.final != forcedMove.final) {
+        if (move.type == FINISH_SIGN && !CheckFinishMove(game->board, game->turn, move.initial, game->dice)) {
+            printf("YOU HAVE TO USE OTHER PAWN TO GET TO FINISH\n");
+        } else if (forcedMove.final != -1 && forcedMove.type != NOT_SET && move.final != forcedMove.final) {
             printf("YOU HAVE TO MAKE FORCED MOVE\n");
             continue;
         }
 
-        if (move.type == ATTACK_SIGN || (move.type == INIT_BAR_SIGN && mvRat == ATTACK_MOVE))
+        if (move.type == FINISH_SIGN && !IsMoveToFinishPossible(game->board, game->turn, game->moveSize)) {
+            printf("YOU HAVE TO MOVE OTHER PAWN TO FINISH");
+            continue;
+        }
+
+        if (mvRat == ATTACK_SIGN || (move.type == INIT_BAR_SIGN && mvRat == ATTACK_MOVE))
             BeatPawn(&game->board, &game->bar, move);
         if (move.type == INIT_BAR_SIGN)
             MovePawnFromBar(&game->bar, &game->board, game->turn, move.final);
+        if (CheckFinishMove(game->board, game->turn, move.initial, game->dice) && move.type == FINISH_SIGN)
+            MovePawnToFinish(&game->board, &game->finish, game->turn, move.initial);
         if ((mvRat == CLEAN_MOVE || mvRat == ATTACK_MOVE) && move.type != INIT_BAR_SIGN)
             MovePawnOnBoard(&game->board, move);
 
-        int multiplier = game->turn == RED ? -1 : 1;
-        int moveSize = (move.type != INIT_BAR_SIGN ? move.initial : FieldIdByColor(multiplier,  game->turn))
-                + move.final * multiplier;
-        RemoveDice(game->dice, moveSize);
+        RemoveDiceFromMove(game->board, move, game->turn, game->dice);
         DiceConf(game->dice, game->moveSize);
     }
 
-    ChangeTurn(game);
+    if (!IsAnyMovePossible(game->board, game->bar, game->turn, game->dice) && game->dice[0] != 0)
+        printf("No possible moves\n");
+}
+
+void RemoveDiceFromMove(board board, pawn_move move, char color, int dice[MAX_DICES]) {
+    int mult = color == RED ? -1 : 1;
+    int moveSize = (move.type != INIT_BAR_SIGN ? move.initial : FieldIdByColor(-1,  color)) + move.final * mult;
+
+    if (move.type == FINISH_SIGN) {
+        for (int i = 0; i < MAX_DICES; i++) {
+            int final = move.initial + mult * dice[i];
+            if (final == -1 || final == FIELDS) {
+                RemoveDice(dice, dice[i]);
+                return;
+            }
+        }
+        if (move.initial == ForcedFinishFieldId(board, color, dice)) {
+            RemoveDice(dice, MaxDiceValue(dice));
+        }
+    } else {
+        if (IsItDouble(dice)) {
+            int tmp = dice[0];
+            for (int i = 0; i < (moveSize / tmp); i++) {
+                RemoveDice(dice, tmp);
+            }
+            return;
+        } else {
+            if (moveSize == dice[0] + dice[1]) {
+                RemoveDice(dice, dice[0]);
+                RemoveDice(dice, dice[1]);
+            } else {
+                RemoveDice(dice, moveSize);
+            }
+        }
+    }
 }
 
 void PlayRound(game* game) {
     while (!CheckWinner(*game)) {
         printf("%s's turn, roll the dice...\n", colorString(game->turn));
         PlayTurn(game);
+        if (!CheckWinner(*game))
+            ChangeTurn(game);
     }
 
     printf("Winner: %s", colorString(game->turn));
@@ -283,13 +332,11 @@ void StartRound(game* game) {
 int CheckWinner(game game) {
     field playerBar = game.turn == RED ? game.bar.red_pawns : game.bar.white_pawns;
 
-    if (!playerBar.pawnsCounter)
+    if (playerBar.pawnsCounter)
         return 0;
 
-    for (int i = 0; i < FIELDS; i++) {
-        if (game.board.fields[i].color == game.turn && !game.board.fields[i].pawnsCounter)
-            return 0;
-    }
+    if (CountPawnsOnBoard(game.board, game.turn, FIELDS))
+        return 0;
 
     return 1;
 }

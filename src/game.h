@@ -35,5 +35,7 @@ void SetPossibleMoveSizes(int dice[MAX_DICES], int moveSize[MAX_DICES]);
 void SortDice(int dice[DICE_AMOUNT]);
 void RemoveDice(int dice[MAX_DICES], int value);
 int IsDiceEmpty(const int dice[MAX_DICES]);
+void RemoveDiceFromMove(board board, pawn_move move, char color, int dice[MAX_DICES]);
+int IsItDouble(const int dice[DICE_AMOUNT]);
 
 #endif //BACKGAMMON_GAME_H

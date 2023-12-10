@@ -81,6 +81,10 @@ int FieldIdByColor(int fieldId, char color) {
     return color == RED ? ReversedFieldId(fieldId) : fieldId;
 }
 
+int CountPawnsNotInHome(board board, char color) {
+    return CountPawnsOnBoard(board, color, FIELDS) - CountPawnsOnBoard(board, color, HOME_FIELDS);
+}
+
 int CountPawnsOnBoard(board board, char color, int category) {
     int counter = 0;
 
@@ -122,20 +126,101 @@ int IsMoveWithSizeFromBoardPossible(board board, char color, int moveSize) {
     return 0;
 }
 
-int IsMoveToFinishPossible(board board, char color, int moveSize) {
-    int pawnsOnBoard = CountPawnsOnBoard(board, color, FIELDS),
-            homePawns = CountPawnsOnBoard(board, color, HOME_FIELDS);
+int IsAnyMoveOnBoardPossible(board board, char color, const int moveSize[MAX_DICES]) {
+    for (int i = 0; i < FIELDS; i++) {
+        if (board.fields[i].color != color)
+            continue;
 
-    if (pawnsOnBoard - homePawns > 0 || homePawns == 0)
+        for (int j = 0; j < MAX_DICES; j++) {
+            if (moveSize[j] == 0)
+                return 0;
+            int final = i + (color == RED ? -1 : 1) * moveSize[j];
+            if (final >= 0 && final < FIELDS && CheckIsMovePossible(board.fields[final], color))
+                return 1;
+        }
+    }
+
+    return 0;
+}
+
+int IsMoveToFinishPossible(board board, char color, int moveSize[MAX_DICES]) {
+    int homePawns = CountPawnsOnBoard(board, color, HOME_FIELDS);
+
+    if (CountPawnsNotInHome(board, color) > 0 || homePawns == 0)
         return 0;
 
+    for (int i = 0; i < MAX_DICES; i++) {
+        if (moveSize[i] == 0)
+            return 0;
+
+        if (CheckMoveToFinishWithSize(board, color, moveSize[i]))
+            return 1;
+    }
+
+    return 0;
+}
+
+int MaxDiceValue(const int dice[MAX_DICES]) {
+    int temp = 0;
+    for (int i = 0; i < MAX_DICES; i++) {
+        if (temp < dice[i])
+            temp = dice[i];
+    }
+    return temp;
+}
+
+int ForcedFinishFieldId(board board, char color, int dice[MAX_DICES]) {
+    int mult = color == RED ? -1 : 1, max = MaxDiceValue(dice);
+
+    for (int i = HOME_FIELDS - 1; i >= 0; i--) {
+        int fClr = FieldIdByColor(i, ReversedColor(color));
+        int final = fClr + mult * max;
+        if (board.fields[fClr].color != color)
+            continue;
+        if (final <= -1 || final >= FIELDS)
+            return fClr;
+    }
+    return -1;
+}
+
+int CheckFinishMove(board board, char color, int fieldId, int dice[MAX_DICES]) {
+    int homePawns = CountPawnsOnBoard(board, color, HOME_FIELDS);
+
+    if (CountPawnsNotInHome(board, color) > 0 || homePawns == 0)
+        return 0;
+
+    if (CountPawnsNotInHome(board, color) || board.fields[fieldId].color != color)
+        return 0;
+
+    int mult = color == RED ? -1 : 1;
+
+    for (int i = 0; i < MAX_DICES; i++) {
+        int final = fieldId + mult * dice[i];
+        if (final == -1 || final == FIELDS)
+            return 1;
+    }
+
+    if (ForcedFinishFieldId(board, color, dice) == fieldId)
+        return 1;
+
+    return 0;
+}
+
+int CheckMoveToFinishWithSize(board board, char color, int moveSize) {
+    int homePawns = CountPawnsOnBoard(board, color, HOME_FIELDS);
+
+    if (CountPawnsNotInHome(board, color) > 0 || homePawns == 0)
+        return 0;
+
+    int multiplier = color == RED ? -1 : 1;
+
     for (int i = FIELDS - 1; i >= 0; i--) {
-        int fieldId = color == RED ? ReversedFieldId(i) : i;
+        int fieldId = FieldIdByColor(i, color);
 
         if (board.fields[fieldId].color != color)
             continue;
 
-        if (moveSize - i >= 0)
+        if (fieldId + multiplier * moveSize < 0 || fieldId + multiplier * moveSize >= FIELDS)
             return 1;
     }
 
@@ -147,8 +232,10 @@ int IsAnyMovePossible(board board, bar bar, char color, int dice[DICE_AMOUNT]) {
         return IsMoveFromBarPossible(board, color, dice);
 
     for (int i = 0; i < DICE_AMOUNT; i++) {
+        if (dice[i] == 0)
+            break;
         if (IsMoveWithSizeFromBoardPossible(board, color, dice[i]) ||
-            IsMoveToFinishPossible(board, color, dice[i]))
+                CheckMoveToFinishWithSize(board, color, dice[i]))
             return 1;
     }
 
@@ -173,30 +260,30 @@ int IsBarInitAttackPossible(bar bar, board board, char color, int dice[MAX_DICES
 }
 
 void ClosestPossibleAttack(board board, char color, const int moveSize[MAX_DICES], pawn_move* move) {
-    int fieldId, init, mult = color == RED ? -1 : 1;
+    int id, init, mult = color == RED ? -1 : 1, inc = color == WHITE;
 
-    init = fieldId = FieldIdByColor(0, color);
+    init = id = FieldIdByColor(0, color);
 
-    while (fieldId < FIELDS && fieldId >= 0) {
-        if (board.fields[fieldId].color != color) {
-            color == WHITE ? fieldId++ : fieldId--;
+    while (id < FIELDS && id >= 0) {
+        if (board.fields[id].color != color) {
+            inc ? id++ : id--;
             continue;
         }
 
         for (int i = 0; i < MAX_DICES; i++) {
-            int finalField = fieldId + moveSize[i] * mult;
+            int final = id + moveSize[i] * mult;
 
-            if (finalField >= FIELDS || finalField < 0)
+            if (final >= FIELDS || final < 0)
                 continue;
 
-            if (CheckIsMovePossible(board.fields[finalField], color) == ATTACK_MOVE &&
-                init + mult * finalField < init + mult * (move->final)) {
-                move->initial = fieldId;
-                move->final = finalField;
+            if (CheckIsMovePossible(board.fields[final], color) == ATTACK_MOVE &&
+                init + mult * final < init + mult * (move->final)) {
+                move->initial = id;
+                move->final = final;
             }
         }
 
-        color == WHITE ? fieldId++ : fieldId--;
+        inc ? id++ : id--;
     }
 }
 
@@ -210,7 +297,7 @@ void ForcedAttack(board board, char color, int moveSize[MAX_DICES], pawn_move* m
 }
 
 // to-do finish forced to last pawn on board if movesize > fields to finish
-pawn_move IsThereForcedMove(board board, bar bar, finish finish, char color, int moveSize[MAX_DICES], int dice[MAX_DICES]) {
+pawn_move IsThereForcedMove(board board, bar bar, char color, int moveSize[MAX_DICES], int dice[MAX_DICES]) {
     pawn_move forcedMove;
     forcedMove.type = NOT_SET;
     forcedMove.final = -1;
