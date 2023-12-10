@@ -118,6 +118,8 @@ int IsMoveFromBarPossible(board board, char color, int dice[DICE_AMOUNT]) {
 int IsMoveWithSizeFromBoardPossible(board board, char color, int moveSize) {
     for (int i = 0; i < FIELDS - moveSize; i++) {
         int fieldId = color == RED ? ReversedFieldId(i) - moveSize : i + moveSize;
+        if (board.fields[i].color != color)
+            continue;
 
         if (CheckIsMovePossible(board.fields[fieldId], color))
             return 1;
@@ -234,8 +236,23 @@ int IsAnyMovePossible(board board, bar bar, char color, int dice[DICE_AMOUNT]) {
     for (int i = 0; i < DICE_AMOUNT; i++) {
         if (dice[i] == 0)
             break;
-        if (IsMoveWithSizeFromBoardPossible(board, color, dice[i]) ||
-                CheckMoveToFinishWithSize(board, color, dice[i]))
+        if (IsMoveWithSizeFromBoardPossible(board, color, dice[i]) || CheckMoveToFinishWithSize(board, color, dice[i]))
+            return 1;
+    }
+
+    return 0;
+}
+
+int IsMoveFromFieldPossible(board board, char color, int fieldId, const int dice[DICE_AMOUNT]) {
+    for (int i = 0; i < DICE_AMOUNT; i++) {
+        if (dice[i] == 0)
+            break;
+
+        int final = fieldId + (color == RED ? -1 : 1) * dice[i];
+        if (final < 0 || fieldId >= FIELDS)
+            continue;
+
+        if (CheckIsMovePossible(board.fields[final], color))
             return 1;
     }
 
@@ -259,21 +276,28 @@ int IsBarInitAttackPossible(bar bar, board board, char color, int dice[MAX_DICES
     return -1;
 }
 
-void ClosestPossibleAttack(board board, char color, const int moveSize[MAX_DICES], pawn_move* move) {
-    int id, init, mult = color == RED ? -1 : 1, inc = color == WHITE;
+int Mlp(char color) {
+    return color == RED ? -1 : 1;
+}
+
+void ClosestPossibleAttack(board board, char color, int moveSize[MAX_DICES], int dice[MAX_DICES], pawn_move* move) {
+    int id, init, mult = Mlp(color);
 
     init = id = FieldIdByColor(0, color);
 
     while (id < FIELDS && id >= 0) {
         if (board.fields[id].color != color) {
-            inc ? id++ : id--;
+            id += mult;
             continue;
         }
 
         for (int i = 0; i < MAX_DICES; i++) {
             int final = id + moveSize[i] * mult;
 
-            if (final >= FIELDS || final < 0)
+            if (moveSize[i] == 0 || final >= FIELDS || final < 0)
+                continue;
+
+            if (i == 2 && !IsMoveFromFieldPossible(board, color, id, dice))
                 continue;
 
             if (CheckIsMovePossible(board.fields[final], color) == ATTACK_MOVE &&
@@ -283,14 +307,14 @@ void ClosestPossibleAttack(board board, char color, const int moveSize[MAX_DICES
             }
         }
 
-        inc ? id++ : id--;
+        id += mult;
     }
 }
 
-void ForcedAttack(board board, char color, int moveSize[MAX_DICES], pawn_move* move) {
+void ForcedAttack(board board, char color, int moveSize[MAX_DICES], int dice[MAX_DICES], pawn_move* move) {
     move->final = FieldIdByColor(24, color);
 
-    ClosestPossibleAttack(board, color, moveSize, move);
+    ClosestPossibleAttack(board, color, moveSize, dice, move);
 
     if (move->final != FieldIdByColor(24, color))
         move->type = ATTACK_SIGN;
@@ -311,7 +335,7 @@ pawn_move IsThereForcedMove(board board, bar bar, char color, int moveSize[MAX_D
         return forcedMove;
     }
 
-    ForcedAttack(board, color, moveSize, &forcedMove);
+    ForcedAttack(board, color, moveSize, dice, &forcedMove);
 
     if (forcedMove.type == ATTACK_SIGN)
         return forcedMove;

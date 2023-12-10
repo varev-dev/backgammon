@@ -112,7 +112,8 @@ void DiceConf(int dice[MAX_DICES], int moveSize[MAX_DICES]) {
 
 void PlayTurn(game* game) {
     RollDice(game);
-
+    game->dice[0] = 2;
+    game->dice[1] = 4;
     SetDicesIfDouble(game->dice);
     DiceConf(game->dice, game->moveSize);
 
@@ -131,14 +132,14 @@ void PlayTurn(game* game) {
         if (move.type != FINISH_SIGN)
             mvRat = CheckIsMovePossible(game->board.fields[move.final], game->turn);
 
-        if (mvRat == NOT_POSSIBLE_MOVE || (move.final < 0 || move.final >= FIELDS || game->board.fields[move.initial].color != game->turn) && move.type != FINISH_SIGN) {
+        if (mvRat == NOT_POSSIBLE_MOVE || (move.final < 0 || move.final >= FIELDS || (game->board.fields[move.initial].color != game->turn && move.type != INIT_BAR_SIGN)) && move.type != FINISH_SIGN) {
             printf("move is not possible\n");
             continue;
         }
 
         if (move.type == FINISH_SIGN && !CheckFinishMove(game->board, game->turn, move.initial, game->dice)) {
             printf("YOU HAVE TO USE OTHER PAWN TO GET TO FINISH\n");
-        } else if (forcedMove.final != -1 && forcedMove.type != NOT_SET && move.final != forcedMove.final) {
+        } else if ((forcedMove.type == INIT_BAR_SIGN && move.type != INIT_BAR_SIGN) || (forcedMove.final != -1 && forcedMove.type != NOT_SET && move.final != forcedMove.final)) {
             printf("YOU HAVE TO MAKE FORCED MOVE\n");
             continue;
         }
@@ -148,7 +149,7 @@ void PlayTurn(game* game) {
             continue;
         }
 
-        if (mvRat == ATTACK_SIGN || (move.type == INIT_BAR_SIGN && mvRat == ATTACK_MOVE))
+        if (mvRat == ATTACK_MOVE || (move.type == INIT_BAR_SIGN && mvRat == ATTACK_MOVE))
             BeatPawn(&game->board, &game->bar, move);
         if (move.type == INIT_BAR_SIGN)
             MovePawnFromBar(&game->bar, &game->board, game->turn, move.final);
@@ -161,40 +162,52 @@ void PlayTurn(game* game) {
         DiceConf(game->dice, game->moveSize);
     }
 
-    if (!IsAnyMovePossible(game->board, game->bar, game->turn, game->dice) && game->dice[0] != 0)
+    if (!IsAnyMovePossible(game->board, game->bar, game->turn, game->dice))
         printf("No possible moves\n");
 }
 
+void RemoveDiceIfFinish(board board, int dice[MAX_DICES], char color, pawn_move move) {
+    int mult = Mlp(color);
+    for (int i = 0; i < MAX_DICES; i++) {
+        int final = move.initial + mult * dice[i];
+        if (final == -1 || final == FIELDS) {
+            RemoveDice(dice, dice[i]);
+            return;
+        }
+    }
+    if (move.initial == ForcedFinishFieldId(board, color, dice)) {
+        RemoveDice(dice, MaxDiceValue(dice));
+    }
+}
+
+void RemoveDiceIfNotFinish(int dice[MAX_DICES], int moveSize) {
+    if (IsItDouble(dice)) {
+        int tmp = dice[0];
+        for (int i = 0; i < (moveSize / tmp); i++) {
+            RemoveDice(dice, tmp);
+        }
+        return;
+    } else {
+        if (moveSize == dice[0] + dice[1]) {
+            RemoveDice(dice, dice[0]);
+            RemoveDice(dice, dice[1]);
+        } else {
+            RemoveDice(dice, moveSize);
+        }
+    }
+
+}
+
 void RemoveDiceFromMove(board board, pawn_move move, char color, int dice[MAX_DICES]) {
-    int mult = color == RED ? -1 : 1;
+    int mult = Mlp(color);
     int moveSize = (move.type != INIT_BAR_SIGN ? move.initial : FieldIdByColor(-1,  color)) + move.final * mult;
 
+    printf("%d\n\n", moveSize);
+
     if (move.type == FINISH_SIGN) {
-        for (int i = 0; i < MAX_DICES; i++) {
-            int final = move.initial + mult * dice[i];
-            if (final == -1 || final == FIELDS) {
-                RemoveDice(dice, dice[i]);
-                return;
-            }
-        }
-        if (move.initial == ForcedFinishFieldId(board, color, dice)) {
-            RemoveDice(dice, MaxDiceValue(dice));
-        }
+        RemoveDiceIfFinish(board, dice, color, move);
     } else {
-        if (IsItDouble(dice)) {
-            int tmp = dice[0];
-            for (int i = 0; i < (moveSize / tmp); i++) {
-                RemoveDice(dice, tmp);
-            }
-            return;
-        } else {
-            if (moveSize == dice[0] + dice[1]) {
-                RemoveDice(dice, dice[0]);
-                RemoveDice(dice, dice[1]);
-            } else {
-                RemoveDice(dice, moveSize);
-            }
-        }
+        RemoveDiceIfNotFinish(dice, moveSize);
     }
 }
 
@@ -204,6 +217,7 @@ void PlayRound(game* game) {
         PlayTurn(game);
         if (!CheckWinner(*game))
             ChangeTurn(game);
+        PrintBoard(game->board, game->bar, game->finish);
     }
 
     printf("Winner: %s", colorString(game->turn));

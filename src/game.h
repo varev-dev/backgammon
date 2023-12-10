@@ -30,7 +30,6 @@ void SetFirstTurn(game* game);
 void ChangeTurn(game* game);
 void StartRound(game* game);
 int CheckWinner(game game);
-int IsAnyMovePossible(board board, bar bar, char color, int dice[DICE_AMOUNT]);
 void SetPossibleMoveSizes(int dice[MAX_DICES], int moveSize[MAX_DICES]);
 void SortDice(int dice[DICE_AMOUNT]);
 void RemoveDice(int dice[MAX_DICES], int value);
